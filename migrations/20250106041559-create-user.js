@@ -21,6 +21,15 @@ module.exports = {
       refreshToken: {
         type: Sequelize.STRING
       },
+      nama:{
+        type: Sequelize.STRING
+      },
+      email:{
+        type: Sequelize.STRING
+      },
+      emailVerificationToken: {
+        type: Sequelize.STRING
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE
@@ -28,6 +37,11 @@ module.exports = {
       updatedAt: {
         allowNull: false,
         type: Sequelize.DATE
+      },
+      isVerified: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false,
+        allowNull: false,
       }
     });
   },

@@ -2,44 +2,116 @@ require('dotenv').config();
 const { User } = require('../models/index');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const rateLimit = require('express-rate-limit');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
+
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // limit each IP to 5 requests per windowMs
+    message: 'Too many login attempts from this IP, please try again after 15 minutes'
+});
 
 const login = async (req, res) => {
     const { username, password } = req.body;
-
+  
     try {
-        let user = await User.findOne({ where: { username } });
-        if (!user) {
-            return res.status(401).json({ error: 'Invalid username or password' });
-        }
-
-        const isPasswordValid = await bcrypt.compare(password, user.password);
-        if (!isPasswordValid) {
-            return res.status(401).json({ error: 'Invalid username or password' });
-        }
-
-        const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        const refreshToken = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
-        user.refreshToken = refreshToken;
-        await user.save();
-
-        return res.status(200).json({
-            error: false,
-            message: 'Login successful',
-            token,
-            refreshToken,
-            role: user.role
-        });
+      const user = await User.findOne({ where: { username } });
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+  
+      if (!user.isVerified) {
+        return res.status(401).json({ error: 'Please verify your email before logging in' });
+      }
+  
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+  
+      const token = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      const refreshToken = jwt.sign({ id: user.id, username: user.username }, process.env.JWT_SECRET, { expiresIn: '7d' });
+  
+      user.refreshToken = refreshToken;
+      await user.save();
+  
+      return res.status(200).json({
+        error: false,
+        message: 'Login successful',
+        token,
+        refreshToken,
+        role: user.role
+      });
     } catch (error) {
-        console.error('Error in login:', error.message || error);
-        return res.status(500).json({ error: 'Internal server error' });
+      console.error('Error in login:', error.message || error);
+      return res.status(500).json({ error: 'Internal server error' });
     }
-};
+  };
 
-const register = async (req, res) => {
-    
-}
+ 
+  const register = async (req, res) => {
+    const { username, password, email } = req.body;
+  
+    try {
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const user = await User.create({ username, password: hashedPassword, email });
+  
+      const token = crypto.randomBytes(32).toString('hex');
+      const verificationLink = `${req.protocol}://${req.get('host')}/auth/verify-email?token=${token}`;
+  
+      // Save token to user (or a separate table)
+      user.emailVerificationToken = token;
+      await user.save();
+  
+      // Configure the email transporter
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: "kukishinobu004@gmail.com",
+          pass: "mlhq znuf yery zqra",
+        },
+      });
+  
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Email Verification',
+        text: `Please verify your email by clicking the following link: ${verificationLink}`,
+      };
+  
+      await transporter.sendMail(mailOptions);
+  
+      res.status(201).json({ message: 'User registered. Please check your email to verify your account.' });
+    } catch (error) {
+      console.error('Error in register:', error.message || error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+  const verifyEmail = async (req, res) => {
+    const { token } = req.query;
+  
+    try {
+      const user = await User.findOne({ where: { emailVerificationToken: token } });
+      if (!user) {
+        return res.status(400).json({ error: 'Invalid or expired token' });
+      }
+  
+      user.isVerified = true;
+      user.emailVerificationToken = null;
+      await user.save();
+  
+      res.status(200).json({ message: 'Email verified successfully. You can now log in.' });
+    } catch (error) {
+      console.error('Error in email verification:', error.message || error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  };
+  
 
 module.exports = {
     login,
+    loginLimiter,
+    register,
+    verifyEmail
 };

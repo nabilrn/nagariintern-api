@@ -20,13 +20,26 @@ module.exports = (sequelize, DataTypes) => {
       allowNull : false
     },
     role: {
-      type: DataTypes.ENUM('user', 'admin'),
+      type: DataTypes.ENUM('user', 'admin'), defaultValue: 'user',
       allowNull: false,
     },
     refreshToken: {
       type : DataTypes.STRING
+    },
+    nama: {
+      type : DataTypes.STRING
+    },
+    email: {
+      type : DataTypes.STRING
+    },
+    emailVerificationToken: {
+      type: DataTypes.STRING,
+    },
+    isVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
     }
-    
   }, {
     sequelize,
     modelName: 'User',
