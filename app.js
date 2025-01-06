@@ -1,19 +1,27 @@
-const express = require("express");
-const path = require("path");
-const indexRouter = require("./routes/index");
-
+const express = require('express');
+const cors = require('cors');
 const app = express();
+const port = process.env.PORT || 3000;
+const env = process.env.NODE_ENV || 'development';
+const config = require(__dirname + '/config/config.js')[env];
+const indexRouter = require("./routes/index");
+const authRouter = require("./routes/auth");
+// Use CORS middleware
+app.use(cors());
 
-// Middleware
-app.use(express.json()); // For parsing application/json
-app.use(express.urlencoded({ extended: true })); // For parsing application/x-www-form-urlencoded
-app.use(express.static(path.join(__dirname, "public"))); // Serve static files
+// Middleware to parse JSON bodies
+app.use(express.json());
 
-// Routes
+// Basic route
+app.get('/', (req, res) => {
+  res.send('Hello, Express!');
+});
+
+// API routes
 app.use("/", indexRouter);
+app.use("/auth", authRouter);
 
-// Server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+// Start the server
+app.listen(port, () => {
+  console.log(`Server is running on http://localhost:${port}`);
 });
