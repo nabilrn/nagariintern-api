@@ -5,9 +5,9 @@ module.exports = {
     await queryInterface.createTable('permintaan_magang', {
       id: {
         type: Sequelize.INTEGER,
+        allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        allowNull: false,
       },
       userId: {
         type: Sequelize.INTEGER,
@@ -37,8 +37,8 @@ module.exports = {
       },
       statusPermohonan: {
         type: Sequelize.ENUM('menunggu', 'disetujui', 'ditolak'),
-        allowNull: false,
         defaultValue: 'menunggu',
+        allowNull: false,
       },
       fileLamaran: {
         type: Sequelize.STRING,
@@ -46,26 +46,40 @@ module.exports = {
       },
       tanggalPengajuan: {
         type: Sequelize.DATE,
+        defaultValue: Sequelize.NOW,
+      },
+      statusPersetujuanPSDM: {
+        type: Sequelize.ENUM('menunggu', 'disetujui', 'ditolak'),
+        defaultValue: 'menunggu',
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+      },
+      waktuPersetujuanPSDM: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      },
+      statusPersetujuanPimpinan: {
+        type: Sequelize.ENUM('menunggu', 'disetujui', 'ditolak'),
+        defaultValue: 'menunggu',
+        allowNull: false,
+      },
+      waktuPersetujuanPimpinan: {
+        type: Sequelize.DATE,
+        allowNull: true,
       },
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+        defaultValue: Sequelize.NOW,
       },
       updatedAt: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+        defaultValue: Sequelize.NOW,
       },
     });
   },
 
   down: async (queryInterface, Sequelize) => {
-    // Hapus tabel dan ENUM
     await queryInterface.dropTable('permintaan_magang');
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_permintaan_magang_tipePemohon";');
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_permintaan_magang_statusPermohonan";');
   },
 };
