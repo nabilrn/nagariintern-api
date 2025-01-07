@@ -7,8 +7,8 @@ const nodemailer = require('nodemailer');
 const crypto = require('crypto');
 
 const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5, // limit each IP to 5 requests per windowMs
+    windowMs: 15 * 60 * 1000, 
+    max: 5, 
     message: 'Too many login attempts from this IP, please try again after 15 minutes'
 });
 
@@ -23,6 +23,10 @@ const login = async (req, res) => {
   
       if (!user.isVerified) {
         return res.status(401).json({ error: 'Please verify your email before logging in' });
+      }
+
+      if( user.role == 'admin') {
+        return res.status(401).json({ error: 'You are not authorized to login' });
       }
   
       const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -51,25 +55,23 @@ const login = async (req, res) => {
 
  
   const register = async (req, res) => {
-    const { username, password, email } = req.body;
+    const { username, password, nama, email  } = req.body;
   
     try {
       const hashedPassword = await bcrypt.hash(password, 10);
-      const user = await User.create({ username, password: hashedPassword, email });
+      const user = await User.create({ username, password: hashedPassword, nama, email });
   
       const token = crypto.randomBytes(32).toString('hex');
       const verificationLink = `${req.protocol}://${req.get('host')}/auth/verify-email?token=${token}`;
   
-      // Save token to user (or a separate table)
       user.emailVerificationToken = token;
       await user.save();
   
-      // Configure the email transporter
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
-          user: "kukishinobu004@gmail.com",
-          pass: "mlhq znuf yery zqra",
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
         },
       });
   
