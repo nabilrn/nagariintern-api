@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
+const path = require('path');
+
 const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/config/config.js')[env];
 const indexRouter = require("./routes/index");
@@ -11,6 +13,9 @@ app.use(cors());
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // Basic route
 app.get('/', (req, res) => {
