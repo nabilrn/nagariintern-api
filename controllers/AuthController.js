@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const nodemailer = require('nodemailer');
 const crypto = require('crypto');
+const { log } = require('console');
 
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
@@ -44,8 +45,7 @@ const login = async (req, res) => {
         error: false,
         message: 'Login successful',
         token,
-        refreshToken,
-        role: user.role
+        user
       });
     } catch (error) {
       console.error('Error in login:', error.message || error);
@@ -62,6 +62,7 @@ const login = async (req, res) => {
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = await User.create({ email, password: hashedPassword, nama });
   
+      
       const token = crypto.randomBytes(32).toString('hex');
       const verificationLink = `${req.protocol}://${req.get('host')}/auth/verify-email?token=${token}`;
   
@@ -91,6 +92,7 @@ const login = async (req, res) => {
       res.status(500).json({ error: 'Internal server error' });
     }
   };
+
   const verifyEmail = async (req, res) => {
     const { token } = req.query;
   

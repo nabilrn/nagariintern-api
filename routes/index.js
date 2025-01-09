@@ -9,7 +9,7 @@ const {
     deletePermintaanMagang,
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
-const upload = require('../middleware/fileUpload');
+const uploadFields = require('../middleware/fileUpload');
 
   
 // Basic route
@@ -18,7 +18,7 @@ router.get('/', (req, res) => {
 });
 
 // Endpoint untuk membuat permintaan magang
-router.post('/intern', verifyToken, upload.single('fileLamaran'), createPermintaanMagang);
+router.post('/intern', verifyToken, uploadFields, createPermintaanMagang);
 
 // Endpoint untuk mendapatkan semua permintaan magang
 router.get('/intern', verifyToken, getAllPermintaanMagang);

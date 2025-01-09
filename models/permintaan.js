@@ -38,18 +38,46 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+      noHp: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       statusPermohonan: {
         type: DataTypes.ENUM('menunggu', 'disetujui', 'ditolak'),
         defaultValue: 'menunggu',
         allowNull: false,
       },
-      fileLamaran: {
+      fileCv: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      fileTranskrip: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      fileKtp: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      fileSuratPengantar: {
         type: DataTypes.STRING,
         allowNull: true,
       },
       tanggalPengajuan: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
+      },
+      tanggalMulai: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      tanggalSelesai: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      departemen: {
+        type: DataTypes.STRING,
+        allowNull: true,
       },
       statusPersetujuanPSDM: {
         type: DataTypes.ENUM('menunggu', 'disetujui', 'ditolak'),

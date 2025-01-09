@@ -1,32 +1,42 @@
 const multer = require('multer');
 const path = require('path');
 
-// Menentukan lokasi penyimpanan file dan nama file
+// Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Folder untuk menyimpan file (buat folder uploads)
+    cb(null, 'uploads/');
   },
   filename: (req, file, cb) => {
-    const fileExtension = path.extname(file.originalname); // Mendapatkan ekstensi file
-    const filename = Date.now() + '-' + Math.round(Math.random() * 1E9) + fileExtension; // Membuat nama file unik
+    // Create unique filename with original field name to identify file type
+    const fieldname = file.fieldname; // Gets the field name from the form
+    const fileExtension = path.extname(file.originalname);
+    const filename = `${fieldname}-${Date.now()}-${Math.round(Math.random() * 1E9)}${fileExtension}`;
     cb(null, filename);
   }
 });
 
-// Filter file yang diizinkan (contoh: hanya gambar atau pdf)
+// Update file filter to only allow PDFs as per client requirements
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-  if (!allowedTypes.includes(file.mimetype)) {
-    return cb(new Error('Jenis file tidak diizinkan!'), false);
+  if (file.mimetype === 'application/pdf') {
+    cb(null, true);
+  } else {
+    cb(new Error('Hanya file PDF yang diizinkan!'), false);
   }
-  cb(null, true);
 };
 
-// Mengatur multer
+// Configure multer
 const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Batasi ukuran file maksimal 5MB
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
 });
 
-module.exports = upload;
+// Define which fields to expect for file uploads
+const uploadFields = upload.fields([
+  { name: 'fileCv', maxCount: 1 },
+  { name: 'fileTranskrip', maxCount: 1 },
+  { name: 'fileKtp', maxCount: 1 },
+  { name: 'fileSuratPengantar', maxCount: 1 }
+]);
+
+module.exports = uploadFields;

@@ -2,41 +2,55 @@ const { PermintaanMagang, User } = require('../models');
 
 
 const createPermintaanMagang = async (req, res) => {
-    try {
-      // Gunakan ID pengguna yang sudah diverifikasi dalam token
-      const userId = req.userId;
-  
-      const { tipePemohon, institusi, jurusan, alamat } = req.body;
-  
-      // Pastikan fileLamaran diterima dari req.file (dengan multer)
-      const fileLamaran = req.file ? req.file.filename : null;  // Ambil nama file yang disimpan oleh multer
-  
-      // Validasi input
-      if (!tipePemohon || !institusi) {
-        return res.status(400).json({ error: 'tipePemohon dan institusi diperlukan.' });
-      }
-  
-      // Pastikan userId valid
-      if (!userId) {
-        return res.status(403).json({ error: 'Pengguna tidak terverifikasi.' });
-      }
-  
-      // Membuat permintaan magang menggunakan userId yang sudah terverifikasi
-      const permintaanMagang = await PermintaanMagang.create({
-        userId,
-        tipePemohon,
-        institusi,
-        jurusan,
-        alamat,
-        fileLamaran,  // Simpan nama file
+  try {
+    const userId = req.userId;
+    const { tipePemohon,institusi, jurusan, alamat,noHp,tanggalMulai,tanggalSelesai, departemen } = req.body;
+    console.log(req.body)
+    // Validate required fields
+    if (!institusi || !jurusan || !alamat || !noHp || !tipePemohon || !tanggalMulai || !tanggalSelesai || !departemen) {
+      return res.status(400).json({ 
+        error: 'Semua field wajib diisi (institusi, jurusan, alamat)' 
       });
-  
-      res.status(201).json({ message: 'Permintaan magang berhasil dibuat.', permintaanMagang });
-    } catch (error) {
-      console.error('Error in createPermintaanMagang:', error.message || error);
-      res.status(500).json({ error: 'Terjadi kesalahan pada server.' });
     }
-  };
+
+    // Validate file uploads
+    if (!req.files || !req.files.fileCv || !req.files.fileTranskrip || 
+        !req.files.fileKtp || !req.files.fileSuratPengantar) {
+      return res.status(400).json({ 
+        error: 'Semua file wajib diunggah (CV, Transkrip, KTP, Surat Pengantar)' 
+      });
+    }
+
+    // Create permintaan magang with file information
+    const permintaanMagang = await PermintaanMagang.create({
+      tipePemohon,
+      userId,
+      institusi,
+      jurusan,
+      alamat,
+      noHp,
+      fileCv: req.files.fileCv[0].filename,
+      fileTranskrip: req.files.fileTranskrip[0].filename,
+      fileKtp: req.files.fileKtp[0].filename,
+      fileSuratPengantar: req.files.fileSuratPengantar[0].filename,
+      tanggalMulai,
+      tanggalSelesai,
+      departemen,
+      status: 'pending' // Add initial status
+    });
+
+    res.status(201).json({
+      message: 'Permintaan magang berhasil dibuat.',
+      data: permintaanMagang
+    });
+
+  } catch (error) {
+    console.error('Error in createPermintaanMagang:', error);
+    res.status(500).json({ 
+      error: 'Terjadi kesalahan pada server.' 
+    });
+  }
+};
 
   const getMyPermintaanMagang = async (req, res) => {
     try {
@@ -49,7 +63,7 @@ const createPermintaanMagang = async (req, res) => {
       }
   
       // Ambil semua permintaan magang yang dimiliki oleh pengguna yang sedang login
-      const permintaanMagang = await PermintaanMagang.findAll({
+      const permintaanMagang = await PermintaanMagang.findOne({
         where: { userId },  // Filter berdasarkan userId
       });
   
