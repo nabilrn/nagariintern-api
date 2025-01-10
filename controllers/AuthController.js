@@ -62,7 +62,6 @@ const login = async (req, res) => {
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = await User.create({ email, password: hashedPassword, nama });
   
-      
       const token = crypto.randomBytes(32).toString('hex');
       const verificationLink = `${req.protocol}://${req.get('host')}/auth/verify-email?token=${token}`;
   
