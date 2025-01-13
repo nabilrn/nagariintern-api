@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+
+
 const {
     createPermintaanMagang,
     getAllPermintaanMagang,
@@ -22,9 +24,11 @@ router.post('/intern', verifyToken, uploadFields, createPermintaanMagang);
 
 // Endpoint untuk mendapatkan semua permintaan magang
 router.get('/intern', verifyToken, getAllPermintaanMagang);
+router.post('/intern/:id/accept', verifyToken, updateStatusPermintaanMagang);
+router.post('/intern/:id/reject', verifyToken, updateStatusPermintaanMagang);
+
 
 router.get('/my-intern', verifyToken,getMyPermintaanMagang);
-router.get('/my-intern/:id', verifyToken,getMyPermintaanMagang);
 
 // Endpoint untuk mendapatkan permintaan magang berdasarkan ID
 router.get('/intern/:id', getPermintaanMagangById);
