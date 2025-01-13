@@ -1,4 +1,4 @@
-const { PermintaanMagang, Dokumen, Institusi, Jurusan, Divisi, User, Departemen } = require('../models/index');
+const { PermintaanMagang, Dokumen, Institusi, Jurusan, Divisi, User,  } = require('../models/index');
 
 
 const createPermintaanMagang = async (req, res) => {
@@ -110,7 +110,13 @@ const getMyPermintaanMagang = async (req, res) => {
 const getAllPermintaanMagang = async (req, res) => {
   try {
     const permintaanMagang = await PermintaanMagang.findAll({
-      include: [{ model: User, as: 'user', attributes: ['email', 'nama'] }],
+      include: [
+        { model: User, as: 'user', attributes: ['email', 'nama'] },
+        { model: Institusi, attributes: ['name'] },
+        { model: Jurusan, attributes: ['name'] },
+        { model: Divisi, attributes: ['name'] },
+        { model: Dokumen, attributes: ['tipeDokumen', 'url'] }
+      ],
     });
 
     res.status(200).json(permintaanMagang);
