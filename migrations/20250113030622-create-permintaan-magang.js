@@ -23,16 +23,32 @@ module.exports = {
         type: Sequelize.ENUM('siswa', 'mahasiswa'),
         allowNull: false,
       },
-      institusi: {
-        type: Sequelize.STRING,
+      institusiId: {
+        type: Sequelize.INTEGER,
         allowNull: false,
+        references: {
+          model: 'institusi', // Nama tabel Institusi
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
-      jurusan: {
-        type: Sequelize.STRING,
-        allowNull: true,
+      jurusanId: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'jurusan', // Nama tabel Jurusan
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
       alamat: {
         type: Sequelize.TEXT,
+        allowNull: true,
+      },
+      noHp: {
+        type: Sequelize.STRING,
         allowNull: true,
       },
       statusPermohonan: {
@@ -40,13 +56,27 @@ module.exports = {
         defaultValue: 'menunggu',
         allowNull: false,
       },
-      fileLamaran: {
-        type: Sequelize.STRING,
-        allowNull: true,
-      },
       tanggalPengajuan: {
         type: Sequelize.DATE,
         defaultValue: Sequelize.NOW,
+      },
+      tanggalMulai: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      },
+      tanggalSelesai: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      },
+      divisiId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'divisi', // Nama tabel Departemen
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
       },
       statusPersetujuanPSDM: {
         type: Sequelize.ENUM('menunggu', 'disetujui', 'ditolak'),

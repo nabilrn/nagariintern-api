@@ -9,6 +9,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'userId',
         as: 'user', // Alias untuk relasi
       });
+      PermintaanMagang.belongsTo(models.Institusi, { foreignKey: 'institusiId' });
+      PermintaanMagang.belongsTo(models.Divisi, { foreignKey: 'divisiId' });
+      PermintaanMagang.belongsTo(models.Jurusan, { foreignKey: 'jurusanId' });
+      PermintaanMagang.hasMany(models.Dokumen, { foreignKey: 'permintaanMagangId' });
+      PermintaanMagang.hasMany(models.SuratBalasan, { foreignKey: 'permintaanMagangId' });
+      
     }
   }
 
@@ -26,14 +32,23 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM('siswa', 'mahasiswa'),
         allowNull: false,
       },
-      institusi: {
-        type: DataTypes.STRING,
+      institusiId: {
+        type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+          model: 'institusi', // Nama tabel Institusi
+          key: 'id',
+        },
       },
-      jurusan: {
-        type: DataTypes.STRING,
-        allowNull: true,
+      jurusanId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'jurusan', // Nama tabel Jurusan
+          key: 'id',
+        },
       },
+      
       alamat: {
         type: DataTypes.TEXT,
         allowNull: true,
@@ -47,22 +62,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 'menunggu',
         allowNull: false,
       },
-      fileCv: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      fileTranskrip: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      fileKtp: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
-      fileSuratPengantar: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
+      
       tanggalPengajuan: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
@@ -75,9 +75,13 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
-      departemen: {
-        type: DataTypes.STRING,
+      divisiId: {
+        type: DataTypes.INTEGER,
         allowNull: true,
+        references: {
+          model: 'divisi', // Nama tabel Departemen
+          key: 'id',
+        },
       },
       statusPersetujuanPSDM: {
         type: DataTypes.ENUM('menunggu', 'disetujui', 'ditolak'),
