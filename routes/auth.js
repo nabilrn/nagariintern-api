@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { login, loginLimiter, register, verifyEmail } = require('../controllers/AuthController');
+const { login, register, verifyEmail } = require('../controllers/AuthController');
 const { verifyToken, refreshToken } = require('../middleware/AuthMiddleWare');
 
-router.post('/login', loginLimiter, login);
+router.post('/login', login);
 router.post('/register', register);
 router.post('/refresh-token', refreshToken);
 router.get('/protected-route', verifyToken, (req, res) => {
