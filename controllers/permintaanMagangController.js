@@ -167,7 +167,13 @@ const getPermintaanMagangById = async (req, res) => {
     const { id } = req.params;
 
     const permintaanMagang = await PermintaanMagang.findByPk(id, {
-      include: [{ model: User, as: "user", attributes: ["email", "nama"] }],
+      include: [
+        { model: User, as: "user", attributes: ["email", "nama"] },
+        { model: Institusi, attributes: ["name"] },
+        { model: Jurusan, attributes: ["name"] },
+        { model: Divisi, attributes: ["name"] },
+        { model: Dokumen, attributes: ["tipeDokumen", "url"] },
+      ],
     });
 
     if (!permintaanMagang) {
