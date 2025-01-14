@@ -183,14 +183,12 @@ const getPermintaanMagangById = async (req, res) => {
   }
 };
 
-const updateStatusPermintaanMagang = async (req, res) => {
+const approveStatusPermintaanMagang = async (req, res) => {
   try {
     const { id } = req.params;
-    const { statusPermohonan } = req.body;
 
-    if (!["menunggu", "disetujui", "ditolak"].includes(statusPermohonan)) {
-      return res.status(400).json({ error: "Status permohonan tidak valid." });
-    }
+
+
 
     const permintaanMagang = await PermintaanMagang.findByPk(id);
 
@@ -200,7 +198,7 @@ const updateStatusPermintaanMagang = async (req, res) => {
         .json({ error: "Permintaan magang tidak ditemukan." });
     }
 
-    permintaanMagang.statusPermohonan = statusPermohonan;
+    permintaanMagang.statusPermohonan = "disetujui";
     await permintaanMagang.save();
 
     res
@@ -243,7 +241,7 @@ module.exports = {
   createPermintaanMagang,
   getAllPermintaanMagang,
   getPermintaanMagangById,
-  updateStatusPermintaanMagang,
+  approveStatusPermintaanMagang,
   deletePermintaanMagang,
   getMyPermintaanMagang,
 };

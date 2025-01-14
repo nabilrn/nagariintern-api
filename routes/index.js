@@ -7,7 +7,7 @@ const {
     getAllPermintaanMagang,
     getPermintaanMagangById,
     getMyPermintaanMagang,
-    updateStatusPermintaanMagang,
+    approveStatusPermintaanMagang,
     deletePermintaanMagang,
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
@@ -24,8 +24,6 @@ router.post('/intern', verifyToken, uploadFields, createPermintaanMagang);
 
 // Endpoint untuk mendapatkan semua permintaan magang
 router.get('/intern', verifyToken, getAllPermintaanMagang);
-router.post('/intern/:id/accept', verifyToken, updateStatusPermintaanMagang);
-router.post('/intern/:id/reject', verifyToken, updateStatusPermintaanMagang);
 
 
 router.get('/my-intern', verifyToken,getMyPermintaanMagang);
@@ -34,7 +32,8 @@ router.get('/my-intern', verifyToken,getMyPermintaanMagang);
 router.get('/intern/:id', getPermintaanMagangById);
 
 // // Endpoint untuk memperbarui status permintaan magang
-// router.patch('intern/:id', updateStatusPermintaanMagang);
+router.patch('/intern/:id/approve', approveStatusPermintaanMagang);
+router.patch('/intern/:id/reject', approveStatusPermintaanMagang);
 
 // // Endpoint untuk menghapus permintaan magang
 // router.delete('intern/:id', deletePermintaanMagang);
