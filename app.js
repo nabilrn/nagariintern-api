@@ -8,6 +8,8 @@ const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/config/config.js')[env];
 const indexRouter = require("./routes/index");
 const authRouter = require("./routes/auth");
+const proxyRouter = require("./routes/proxy");
+
 // Use CORS middleware
 app.use(cors());
 
@@ -25,6 +27,7 @@ app.get('/', (req, res) => {
 // API routes
 app.use("/", indexRouter);
 app.use("/auth", authRouter);
+app.use("/api", proxyRouter);
 
 // Start the server
 app.listen(port, () => {
