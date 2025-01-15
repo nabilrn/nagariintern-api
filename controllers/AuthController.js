@@ -15,16 +15,14 @@ const { log } = require("console");
 // });
 
 const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email , password } = req.body;
 
   try {
-    // Cari user berdasarkan email
     const user = await User.findOne({ where: { email } });
     if (!user) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    // Cek apakah email telah diverifikasi
     if (!user.isVerified) {
       return res
         .status(401)
@@ -92,43 +90,107 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
   const { email, password, nama } = req.body;
-
   console.log(req.body);
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = await User.create({ email, password: hashedPassword, nama });
-
     const token = crypto.randomBytes(32).toString("hex");
     const verificationLink = `${req.protocol}://${req.get(
       "host"
     )}/auth/verify-email?token=${token}`;
-
     user.emailVerificationToken = token;
     await user.save();
+
+    // HTML template untuk email
+    const htmlTemplate = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Verifikasi Email</title>
+          <style>
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              font-family: Arial, sans-serif;
+            }
+            .header {
+              background-color: #4F46E5;
+              color: white;
+              padding: 20px;
+              text-align: center;
+              border-radius: 5px 5px 0 0;
+            }
+            .content {
+              background-color: #ffffff;
+              padding: 20px;
+              border: 1px solid #e5e7eb;
+              border-radius: 0 0 5px 5px;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 24px;
+              text-decoration: none;
+              background-color: #ffffff; /* Changed to white */
+              color: #4F46E5; /* Changed text color to blue for contrast */
+              border-radius: 5px;
+              border: 2px solid #4F46E5; /* Added border */
+              margin: 20px 0;
+            }
+            
+            .footer {
+              margin-top: 20px;
+              text-align: center;
+              color: #6B7280;
+              font-size: 14px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Verifikasi Email Anda</h1>
+            </div>
+            <div class="content">
+              <h2>Halo ${nama},</h2>
+              <p>Terima kasih telah mendaftar. Untuk menyelesaikan proses pendaftaran, silakan verifikasi email Anda dengan mengklik tombol di bawah ini:</p>
+              <div style="text-align: center;">
+                <a href="${verificationLink}" class="button">Verifikasi Email</a>
+              </div>
+              <p>Atau salin dan tempel link berikut di browser Anda:</p>
+              <p>${verificationLink}</p>
+              <p>Jika Anda tidak merasa mendaftar di layanan kami, Anda dapat mengabaikan email ini.</p>
+            </div>
+            <div class="footer">
+              <p>Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
+              <p>&copy; ${new Date().getFullYear()} Nama Perusahaan Anda. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
-      },
+      }
     });
 
     const mailOptions = {
       from: process.env.EMAIL_USER,
       to: email,
-      subject: "Email Verification",
-      text: `Please verify your email by clicking the following link: ${verificationLink}`,
+      subject: "Verifikasi Email",
+      html: htmlTemplate, // Menggunakan HTML template
+      text: `Silakan verifikasi email Anda dengan mengklik link berikut: ${verificationLink}` // Fallback text untuk email client yang tidak mendukung HTML
     };
 
     await transporter.sendMail(mailOptions);
-
-    res
-      .status(201)
-      .json({
-        message:
-          "User registered. Please check your email to verify your account.",
-      });
+    res.status(201).json({
+      message: "User registered. Please check your email to verify your account."
+    });
   } catch (error) {
     console.error("Error in register:", error.message || error);
     res.status(500).json({ error: "Internal server error" });

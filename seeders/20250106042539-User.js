@@ -13,11 +13,16 @@ module.exports = {
      *   isBetaMember: false
      * }], {});
     */
-    const hashedPassword = await bcrypt.hash('password123', 10);
+    const hashedPassword = await bcrypt.hash('Admin2024', 10);
 
-    await queryInterface.bulkInsert('Users', [{
-      username: 'testuser',
-      password: hashedPassword, // Hashed password
+    await queryInterface.bulkInsert('users', [{
+      email: 'admin@gmail.com',
+      password: hashedPassword,
+      role : 'admin',
+      refreshToken: null,
+      nama : 'Admin',
+      emailVerificationToken: null, 
+      isVerified: true,
       createdAt: new Date(),
       updatedAt: new Date()
     }], {});
