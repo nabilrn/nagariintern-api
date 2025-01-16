@@ -9,17 +9,21 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      permintaanMagangId: {
+      permintaanId: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'permintaan_magang',
+          model: 'permintaan',
           key: 'id'
         }
       },
-      tipeDokumen: {
-        type: Sequelize.ENUM('cv', 'transkip nilai', 'ktp', 'suratPengantar', 'suratBalasan', 'surat tugas'),
-        allowNull: false
+      tipeDokumenId: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'tipe_dokumen',
+          key: 'id'
+        }
       },
       url: {
         type: Sequelize.STRING,
