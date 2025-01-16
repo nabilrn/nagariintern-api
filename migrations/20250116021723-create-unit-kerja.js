@@ -15,11 +15,11 @@ module.exports = {
       },
       kuotaMhs: {
         type: Sequelize.INTEGER,
-        allowNull: false
+        allowNull: true
       },
       kuotaSiswa: {
         type: Sequelize.INTEGER,
-        allowNull: false
+        allowNull: true
       },
       createdAt: {
         allowNull: false,

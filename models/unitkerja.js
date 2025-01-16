@@ -21,11 +21,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     kuotaMhs: {
       type : DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     kuotaSiswa: {
       type : DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
   }, {
     sequelize,
