@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const { Op } = require('sequelize');
-const { Institusi } = require("../models/index");
+const { PerguruanTinggi } = require("../models/index");
 
 router.get('/sekolah', async (req, res) => {
   try {
@@ -33,9 +33,8 @@ router.get('/universitas', async (req, res) => {
 
     // Hitung offset dan limit untuk pagination
     const limit = parseInt(per_page); // Jumlah data per halaman
-    const offset = (parseInt(page) - 1) * limit; // Menghitung data awal berdasarkan halaman
-
-    const { count, rows: institusi } = await Institusi.findAndCountAll({
+    const offset = (parseInt(page) - 1) * limit; 
+    const { count, rows: Institusi } = await PerguruanTinggi.findAndCountAll({
       where: {
         name: { [Op.like]: `%${name}%` }
       },
@@ -43,13 +42,13 @@ router.get('/universitas', async (req, res) => {
       offset: offset,
     });
 
-    if (institusi.length === 0) {
+    if (Institusi.length === 0) {
       return res.status(404).json({ message: 'Universitas tidak ditemukan' });
     }
 
     res.json({
       status: 'success',
-      dataUniversitas: institusi,
+      dataUniversitas: Institusi,
       total_data: count, // Total semua data yang cocok
       page: parseInt(page), // Halaman saat ini
       per_page: limit, // Jumlah data per halaman
