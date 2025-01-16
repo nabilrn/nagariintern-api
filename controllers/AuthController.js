@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { User } = require("../models/index");
+const { Users, Roles  } = require("../models/index");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const rateLimit = require("express-rate-limit");
@@ -15,10 +15,10 @@ const { log } = require("console");
 // });
 
 const login = async (req, res) => {
-  const { email , password } = req.body;
+  const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ where: { email } });
+    const user = await Users.findOne({ where: { email } });
     if (!user) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
@@ -29,30 +29,31 @@ const login = async (req, res) => {
         .json({ error: "Please verify your email before logging in" });
     }
 
-    // Validasi password
+    // Validate password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    // Buat token JWT
+    // Create JWT token
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.roleId },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
     const refreshToken = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, role: user.roleId },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    // Simpan refresh token ke database
+    // Save refresh token to database
     user.refreshToken = refreshToken;
     await user.save();
 
-    // Pisahkan respons untuk admin dan user biasa
-    if (user.role === "admin") {
+    // Separate response for admin and regular user
+    const role = await Roles.findOne({ where: { id: user.roleId } });
+    if (role.name === "SuperAdmin") {
       return res.status(200).json({
         error: false,
         message: "Admin login successful",
@@ -61,21 +62,19 @@ const login = async (req, res) => {
         user: {
           id: user.id,
           email: user.email,
-          role: user.role,
+          role: role.name,
         },
       });
-    } else if (user.role === "user") {
+    } else if (role.name === "User") {
       return res.status(200).json({
         error: false,
         message: "User login successful",
         token,
         refreshToken,
-        
         user: {
           id: user.id,
-          nama: user.nama,
           email: user.email,
-          role: user.role,
+          role: role.name,
         },
       });
     } else {
@@ -89,11 +88,11 @@ const login = async (req, res) => {
 
 
 const register = async (req, res) => {
-  const { email, password, nama } = req.body;
+  const { email, password } = req.body;
   console.log(req.body);
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ email, password: hashedPassword, nama });
+    const user = await Users.create({ email, password: hashedPassword, roleId: 1 });
     const token = crypto.randomBytes(32).toString("hex");
     const verificationLink = `${req.protocol}://${req.get(
       "host"
@@ -153,7 +152,7 @@ const register = async (req, res) => {
               <h1>Verifikasi Email Anda</h1>
             </div>
             <div class="content">
-              <h2>Halo ${nama},</h2>
+              <h2>Halo ${email},</h2>
               <p>Terima kasih telah mendaftar. Untuk menyelesaikan proses pendaftaran, silakan verifikasi email Anda dengan mengklik tombol di bawah ini:</p>
               <div style="text-align: center;">
                 <a href="${verificationLink}" class="button">Verifikasi Email</a>
@@ -201,7 +200,7 @@ const verifyEmail = async (req, res) => {
   const { token } = req.query;
 
   try {
-    const user = await User.findOne({
+    const user = await Users.findOne({
       where: { emailVerificationToken: token },
     });
     if (!user) {

@@ -9,26 +9,35 @@ module.exports = {
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      email:{
+      email: {
         type: Sequelize.STRING,
-        unique: true,
+        allowNull: false,
+        unique: true
       },
       password: {
         type: Sequelize.STRING,
         allowNull: false
       },
-      role: {
-        type: Sequelize.ENUM('user', 'admin')
+      roleId: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'roles',
+          key: 'id'
+        }
       },
       refreshToken: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true
       },
-      nama:{
-        type: Sequelize.STRING
-      },
-      
       emailVerificationToken: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        allowNull: true
+      },
+      isVerified: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false
       },
       createdAt: {
         allowNull: false,
@@ -37,15 +46,10 @@ module.exports = {
       updatedAt: {
         allowNull: false,
         type: Sequelize.DATE
-      },
-      isVerified: {
-        type: Sequelize.BOOLEAN,
-        defaultValue: false,
-        allowNull: false,
       }
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Users');
+    await queryInterface.dropTable('users');
   }
 };
