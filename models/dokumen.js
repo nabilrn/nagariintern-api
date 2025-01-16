@@ -10,35 +10,41 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      
-      Dokumen.belongsTo(models.PermintaanMagang, { foreignKey: 'permintaanMagangId' });
+      Dokumen.belongsTo(models.Permintaan, {
+        foreignKey : 'permintaanId', as : 'permintaan', onDelete : 'CASCADE'  
+      });
+      Dokumen.belongsTo(models.TipeDokumen, {
+        foreignKey : 'tipeDokumenId', as : 'tipeDokumen', onDelete : 'CASCADE'  
+      });
     }
   }
   Dokumen.init({
-    
-    permintaanMagangId: {
-      type : DataTypes.INTEGER,
-      allowNull : false,
+    permintaanId : {
+      type: DataTypes.INTEGER,
+      allowNull: false,
       references : {
-        model : 'PermintaanMagang',
+        model : 'Permintaan',
         key : 'id'
-      }
-
+      },
+      
     },
-    tipeDokumen: {
-      type : DataTypes.ENUM('cv', 'transkip nilai', 'ktp', 'suratPengantar', 'suratBalasan', 'surat tugas'),
-      allowNull : false
+    tipeDokumenId : {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references : {
+        model : 'TipeDokumen',
+        key : 'id'
+      },
     },
-    url: {
-      type : DataTypes.STRING,
-      allowNull : false
-    }
+    url : {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
   }, {
     sequelize,
     modelName: 'Dokumen',
     tableName : 'dokumen',
-    timestamps : true
-
+    timestamps: true
   });
   return Dokumen;
 };

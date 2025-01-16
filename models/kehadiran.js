@@ -3,18 +3,18 @@ const {
   Model
 } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
-  class SuratBalasan extends Model {
+  class Kehadiran extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      SuratBalasan.belongsTo(models.Permintaan, { foreignKey: 'permintaanId' });
+      Kehadiran.belongsTo(models.Permintaan, { foreignKey: 'pesertamagangId', as: 'pesertamagang' , onDelete: 'CASCADE' });
     }
   }
-  SuratBalasan.init({
-    permintaanId: {
+  Kehadiran.init({
+    pesertamagangId: {
       type : DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -22,16 +22,25 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    nomorSurat: {
+    bulan: {
       type : DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
+    },
+    totalKehadiran: {
+      type : DataTypes.INTEGER,
+      allowNull: true,
+    },
+    biaya: {
+      type : DataTypes.INTEGER, defaultValue: 19000,
+      allowNull: true,
+
     },
 
   }, {
     sequelize,
-    modelName: 'SuratBalasan',
-    tableName : 'suratbalasan',
+    modelName: 'Kehadiran',
+    tableName : 'kehadiran',
     timestamps: true,
   });
-  return SuratBalasan;
+  return Kehadiran;
 };
