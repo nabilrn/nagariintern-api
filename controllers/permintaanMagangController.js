@@ -96,9 +96,9 @@ const createPermintaanMagangSiswa = async (req, res) => {
     });
 
     // Create or find unit kerja record
-    const [unitKerjaRecord] = await UnitKerja.findOrCreate({
-      where: { name: unitKerja },
-      defaults: { name: unitKerja },
+    const unitKerjaRecord = await UnitKerja.findOne({
+      where: { id: unitKerja },
+      defaults: { id: unitKerja },
     });
 
     // Create PermintaanMagang record
