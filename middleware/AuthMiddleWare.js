@@ -1,6 +1,6 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { Users, Roles } = require('../models');
 
 const verifyToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -20,7 +20,6 @@ const verifyToken = async (req, res, next) => {
     } catch (err) {
         if (err.name === 'TokenExpiredError') {
             try {
-                // Get user ID from expired token
                 const expiredToken = jwt.decode(token);
                 if (!expiredToken?.id) {
                     return res.status(401).json({ 
@@ -29,11 +28,9 @@ const verifyToken = async (req, res, next) => {
                     });
                 }
 
-                // Find user and check refresh token
-                const user = await User.findOne({ 
-                    where: { 
-                        id: expiredToken.id,
-                    } 
+                const user = await Users.findOne({ 
+                    where: { id: expiredToken.id },
+                    include: [{ model: Roles, as: 'role' }]
                 });
 
                 if (!user || !user.refreshToken) {
@@ -43,11 +40,9 @@ const verifyToken = async (req, res, next) => {
                     });
                 }
 
-                // Verify refresh token from database
                 try {
                     jwt.verify(user.refreshToken, process.env.JWT_SECRET);
                 } catch (refreshErr) {
-                    // Clear invalid refresh token
                     user.refreshToken = null;
                     await user.save();
                     
@@ -57,9 +52,8 @@ const verifyToken = async (req, res, next) => {
                     });
                 }
 
-                // Generate new tokens
                 const newToken = jwt.sign(
-                    { id: user.id, email: user.email, role: user.role }, 
+                    { id: user.id, email: user.email, roleId: user.role.id }, 
                     process.env.JWT_SECRET, 
                     { expiresIn: '1h' }
                 );
@@ -69,17 +63,14 @@ const verifyToken = async (req, res, next) => {
                     { expiresIn: '7d' }
                 );
 
-                // Update refresh token in database
                 user.refreshToken = newRefreshToken;
                 await user.save();
 
-                // Set new tokens in response headers
                 res.set({
                     'X-Access-Token': newToken,
                     'X-Refresh-Token': newRefreshToken
                 });
 
-                // Continue with request using new token
                 req.userId = user.id;
                 next();
             } catch (refreshErr) {
@@ -109,15 +100,11 @@ const refreshToken = async (req, res) => {
             });
         }
 
-        // Verify and decode refresh token
         const decoded = jwt.verify(currentRefreshToken, process.env.JWT_SECRET);
         
-        // Find user and validate refresh token
-        const user = await User.findOne({ 
-            where: { 
-                id: decoded.id,
-                refreshToken: currentRefreshToken
-            } 
+        const user = await Users.findOne({ 
+            where: { id: decoded.id, refreshToken: currentRefreshToken },
+            include: [{ model: Roles, as: 'role' }]
         });
 
         if (!user) {
@@ -127,9 +114,8 @@ const refreshToken = async (req, res) => {
             });
         }
 
-        // Generate new tokens
         const newToken = jwt.sign(
-            { id: user.id, email: user.email, role: user.role }, 
+            { id: user.id, email: user.email, roleId: user.role.id }, 
             process.env.JWT_SECRET, 
             { expiresIn: '1h' }
         );
@@ -139,7 +125,6 @@ const refreshToken = async (req, res) => {
             { expiresIn: '7d' }
         );
 
-        // Update refresh token in database
         user.refreshToken = newRefreshToken;
         await user.save();
 
@@ -164,7 +149,7 @@ const refreshToken = async (req, res) => {
     }
 };
 
-const isUserLogin = async (req) => {
+const isUsersLogin = async (req) => {
     const authHeader = req.headers['authorization'];
     if (!authHeader) {
         return false;
@@ -181,14 +166,12 @@ const isUserLogin = async (req) => {
     } catch (err) {
         if (err.name === 'TokenExpiredError') {
             try {
-                // Get user ID from expired token
                 const expiredToken = jwt.decode(token);
                 if (!expiredToken?.id) {
                     return false;
                 }
 
-                // Check if user has valid refresh token
-                const user = await User.findByPk(expiredToken.id);
+                const user = await Users.findByPk(expiredToken.id);
                 if (!user?.refreshToken) {
                     return false;
                 }
@@ -200,11 +183,11 @@ const isUserLogin = async (req) => {
                     return false;
                 }
             } catch (refreshErr) {
-                console.error('isUserLogin refresh verification error:', refreshErr);
+                console.error('isUsersLogin refresh verification error:', refreshErr);
                 return false;
             }
         }
-        console.error('isUserLogin token verification error:', err);
+        console.error('isUsersLogin token verification error:', err);
         return false;
     }
 };
@@ -212,5 +195,5 @@ const isUserLogin = async (req) => {
 module.exports = {
     verifyToken,
     refreshToken,
-    isUserLogin
+    isUsersLogin
 };
