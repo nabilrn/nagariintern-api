@@ -3,7 +3,8 @@ const router = express.Router();
 
 
 const {
-    createPermintaanMagang,
+    createPermintaanMagangMahasiswa,
+    createPermintaanMagangSiswa,
     getAllPermintaanMagang,
     getPermintaanMagangById,
     getMyPermintaanMagang,
@@ -19,7 +20,9 @@ router.get('/', (req, res) => {
 });
 
 // Endpoint untuk membuat permintaan magang
-router.post('/intern', verifyToken, uploadFields, createPermintaanMagang);
+router.post('/intern/mahasiswa', verifyToken, uploadFields, createPermintaanMagangMahasiswa);
+
+router.post('/intern/siswa', verifyToken, uploadFields, createPermintaanMagangSiswa);
 
 // Endpoint untuk mendapatkan semua permintaan magang
 router.get('/intern', verifyToken, getAllPermintaanMagang);

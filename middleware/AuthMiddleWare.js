@@ -1,6 +1,8 @@
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
-const { Users, Roles } = require('../models');
+
+const { Users } = require('../models');
+
 
 const verifyToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -28,9 +30,13 @@ const verifyToken = async (req, res, next) => {
                     });
                 }
 
+
+                // Find user and check refresh token
                 const user = await Users.findOne({ 
-                    where: { id: expiredToken.id },
-                    include: [{ model: Roles, as: 'role' }]
+                    where: { 
+                        id: expiredToken.id,
+                    } 
+
                 });
 
                 if (!user || !user.refreshToken) {
@@ -101,10 +107,12 @@ const refreshToken = async (req, res) => {
         }
 
         const decoded = jwt.verify(currentRefreshToken, process.env.JWT_SECRET);
-        
+
         const user = await Users.findOne({ 
-            where: { id: decoded.id, refreshToken: currentRefreshToken },
-            include: [{ model: Roles, as: 'role' }]
+            where: { 
+                id: decoded.id,
+                refreshToken: currentRefreshToken
+
         });
 
         if (!user) {
