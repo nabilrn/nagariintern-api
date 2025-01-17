@@ -68,10 +68,6 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    tanggalPengajuan: {
-      type : DataTypes.DATE,
-      allowNull: false,
-    },
     tanggalMulai: {
       type : DataTypes.DATE,
       allowNull: false,

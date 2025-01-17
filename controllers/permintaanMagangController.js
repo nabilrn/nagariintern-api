@@ -1,27 +1,50 @@
 const {
-  PermintaanMagang,
+  Permintaan,
   Dokumen,
-  Institusi,
+  Smk,
   Jurusan,
   Divisi,
   User,
+  Siswa,
+  UnitKerja,
 } = require("../models/index");
 
-const createPermintaanMagang = async (req, res) => {
+const createPermintaanMagangSiswa = async (req, res) => {
   try {
     const {
-      userId,
-      tipePemohon,
-      institusi,
-      jurusan,
+      nama,
+      nisn,
       alamat,
       noHp,
+      smk,
+      jurusan,
+      unitKerja,
       tanggalMulai,
       tanggalSelesai,
-      divisi,
     } = req.body;
 
-    // Validate file uploads
+    console.log(req.body);
+
+    // Ambil ID pengguna yang sudah diverifikasi dari token
+    const userId = req.userId;
+
+    // Input validation
+    if (
+      !nama ||
+      !nisn ||
+      !alamat ||
+      !noHp ||
+      !smk ||
+      !jurusan ||
+      !unitKerja ||
+      !tanggalMulai ||
+      !tanggalSelesai
+    ) {
+      return res.status(400).json({
+        error: "Semua field wajib diisi",
+      });
+    }
+
     if (
       !req.files ||
       !req.files.fileCv ||
@@ -35,71 +58,272 @@ const createPermintaanMagang = async (req, res) => {
       });
     }
 
-    // Ensure related tables are populated
-    const [institusiRecord] = await Institusi.findOrCreate({
-      where: { name: institusi },
-      defaults: { name: institusi },
+    // Validate dates
+    const startDate = new Date(tanggalMulai);
+    const endDate = new Date(tanggalSelesai);
+    if (startDate >= endDate) {
+      return res.status(400).json({
+        error: "Tanggal selesai harus lebih besar dari tanggal mulai",
+      });
+    }
+
+    // Create or find institution record
+    const [smkRecord] = await Smk.findOrCreate({
+      where: { name: smk },
+      defaults: { name: smk },
     });
 
-    const [jurusanRecord] = await Jurusan.findOrCreate({
-      where: { name: jurusan, institusiId: institusiRecord.id },
-      defaults: { name: jurusan, institusiId: institusiRecord.id },
-    });
-
-    const [divisiRecord] = await Divisi.findOrCreate({
-      where: { name: divisi },
-      defaults: { name: divisi },
-    });
-
-    // Create PermintaanMagang
-    const permintaanMagang = await PermintaanMagang.create({
+    await Siswa.create({
       userId,
-      tipePemohon,
-      institusiId: institusiRecord.id,
+      name: nama,
+      nisn: nisn,
+      no_hp: noHp,
+      alamat: alamat,
+    });
+
+    // Create or find department record
+    const [jurusanRecord] = await Jurusan.findOrCreate({
+      where: {
+        name: jurusan,
+      },
+      defaults: {
+        name: jurusan,
+      },
+    });
+
+    // Create or find unit kerja record
+    const [unitKerjaRecord] = await UnitKerja.findOrCreate({
+      where: { name: unitKerja },
+      defaults: { name: unitKerja },
+    });
+
+    // Create PermintaanMagang record
+    const permintaanMagang = await Permintaan.create({
+      userId,
+      type: "siswa",
+      smkId: smkRecord.id,
       jurusanId: jurusanRecord.id,
-      alamat,
-      noHp,
       tanggalMulai,
       tanggalSelesai,
-      divisiId: divisiRecord.id,
-      statusPermohonan: "menunggu",
-      statusPersetujuanPSDM: "menunggu",
-      statusPersetujuanPimpinan: "menunggu",
+      unitKerjaId: unitKerjaRecord.id,
+      statusId: 1,
     });
+    console.log(permintaanMagang.id, ">>>>>>>>>>>>>>>>>>>>>>>");
 
-    // Create documents for uploaded files
+    // Prepare documents data
     const documents = [
       {
-        permintaanMagangId: permintaanMagang.id,
-        tipeDokumen: 'cv',
-        url: req.files.fileCv[0].filename
+        permintaanId: permintaanMagang.id,
+        tipeDokumenId: 1,
+        url: req.files.fileCv[0].filename,
       },
       {
-        permintaanMagangId: permintaanMagang.id,
-        tipeDokumen: 'transkip nilai',
-        url: req.files.fileTranskrip[0].filename
+        permintaanId: permintaanMagang.id,
+        tipeDokumenId: 3,
+        url: req.files.fileTranskrip[0].filename,
       },
       {
-        permintaanMagangId: permintaanMagang.id,
-        tipeDokumen: 'ktp',
-        url: req.files.fileKtp[0].filename
+        permintaanId: permintaanMagang.id,
+        tipeDokumenId: 4,
+        url: req.files.fileKtp[0].filename,
       },
       {
-        permintaanMagangId: permintaanMagang.id,
-        tipeDokumen: 'suratPengantar',
-        url: req.files.fileSuratPengantar[0].filename
-      }
+        permintaanId: permintaanMagang.id,
+        tipeDokumenId: 2,
+        url: req.files.fileSuratPengantar[0].filename,
+      },
     ];
 
     // Save all documents
     await Dokumen.bulkCreate(documents);
 
+    // Send success response
     res.status(201).json({
       message: "Permintaan magang berhasil dibuat",
-      data: permintaanMagang,
+      data: {
+        id: permintaanMagang.id,
+        nama,
+        smk: smkRecord.name,
+        jurusan: jurusanRecord.name,
+        unitKerja: unitKerjaRecord.name,
+        tanggalMulai,
+        tanggalSelesai,
+        status: permintaanMagang.status,
+      },
     });
   } catch (error) {
-    console.error(error);
+    console.error("Create Permintaan Magang Error:", error);
+
+    // Handle specific database errors
+    if (error.name === "SequelizeValidationError") {
+      return res.status(400).json({
+        message: "Data yang dimasukkan tidak valid",
+        error: error.errors.map((e) => e.message),
+      });
+    }
+
+    // Handle general errors
+    res.status(500).json({
+      message: "Terjadi kesalahan saat membuat permintaan magang",
+      error: error.message,
+    });
+  }
+};
+
+const createPermintaanMagangMahasiswa = async (req, res) => {
+  try {
+    const {
+      nama,
+      nim,
+      alamat,
+      noHp,
+      perguruangTinggi,
+      prodi,
+      unitKerja,
+      tanggalMulai,
+      tanggalSelesai,
+    } = req.body;
+
+    console.log(req.body);
+
+    // Ambil ID pengguna yang sudah diverifikasi dari token
+    const userId = req.userId;
+
+    // // Input validation
+    // if (
+    //   !nama ||
+    //   !nisn ||
+    //   !alamat ||
+    //   !noHp ||
+    //   !smk ||
+    //   !jurusan ||
+    //   !unitKerja ||
+    //   !tanggalMulai ||
+    //   !tanggalSelesai
+    // ) {
+    //   return res.status(400).json({
+    //     error: "Semua field wajib diisi",
+    //   });
+    // }
+
+    if (
+      !req.files ||
+      !req.files.fileCv ||
+      !req.files.fileTranskrip ||
+      !req.files.fileKtp ||
+      !req.files.fileSuratPengantar
+    ) {
+      return res.status(400).json({
+        error:
+          "Semua file wajib diunggah (CV, Transkrip, KTP, Surat Pengantar)",
+      });
+    }
+
+    // Validate dates
+    const startDate = new Date(tanggalMulai);
+    const endDate = new Date(tanggalSelesai);
+    if (startDate >= endDate) {
+      return res.status(400).json({
+        error: "Tanggal selesai harus lebih besar dari tanggal mulai",
+      });
+    }
+
+    // Create or find institution record
+    const [smkRecord] = await Smk.findOrCreate({
+      where: { name: smk },
+      defaults: { name: smk },
+    });
+
+    await Siswa.create({
+      userId,
+      name: nama,
+      nisn: nisn,
+      no_hp: noHp,
+      alamat: alamat,
+    });
+
+    // Create or find department record
+    const [jurusanRecord] = await Jurusan.findOrCreate({
+      where: {
+        name: jurusan,
+      },
+      defaults: {
+        name: jurusan,
+      },
+    });
+
+    // Create or find unit kerja record
+    const [unitKerjaRecord] = await UnitKerja.findOrCreate({
+      where: { name: unitKerja },
+      defaults: { name: unitKerja },
+    });
+
+    // Create PermintaanMagang record
+    const permintaanMagang = await Permintaan.create({
+      userId,
+      type: "siswa",
+      smkId: smkRecord.id,
+      jurusanId: jurusanRecord.id,
+      tanggalMulai,
+      tanggalSelesai,
+      unitKerjaId: unitKerjaRecord.id,
+      statusId: 1,
+    });
+    console.log(permintaanMagang.id, ">>>>>>>>>>>>>>>>>>>>>>>");
+
+    // Prepare documents data
+    const documents = [
+      {
+        permintaanId: permintaanMagang.id,
+        tipeDokumenId: 1,
+        url: req.files.fileCv[0].filename,
+      },
+      {
+        permintaanId: permintaanMagang.id,
+        tipeDokumenId: 3,
+        url: req.files.fileTranskrip[0].filename,
+      },
+      {
+        permintaanId: permintaanMagang.id,
+        tipeDokumenId: 4,
+        url: req.files.fileKtp[0].filename,
+      },
+      {
+        permintaanId: permintaanMagang.id,
+        tipeDokumenId: 2,
+        url: req.files.fileSuratPengantar[0].filename,
+      },
+    ];
+
+    // Save all documents
+    await Dokumen.bulkCreate(documents);
+
+    // Send success response
+    res.status(201).json({
+      message: "Permintaan magang berhasil dibuat",
+      data: {
+        id: permintaanMagang.id,
+        nama,
+        smk: smkRecord.name,
+        jurusan: jurusanRecord.name,
+        unitKerja: unitKerjaRecord.name,
+        tanggalMulai,
+        tanggalSelesai,
+        status: permintaanMagang.status,
+      },
+    });
+  } catch (error) {
+    console.error("Create Permintaan Magang Error:", error);
+
+    // Handle specific database errors
+    if (error.name === "SequelizeValidationError") {
+      return res.status(400).json({
+        message: "Data yang dimasukkan tidak valid",
+        error: error.errors.map((e) => e.message),
+      });
+    }
+
+    // Handle general errors
     res.status(500).json({
       message: "Terjadi kesalahan saat membuat permintaan magang",
       error: error.message,
@@ -193,9 +417,6 @@ const approveStatusPermintaanMagang = async (req, res) => {
   try {
     const { id } = req.params;
 
-
-
-
     const permintaanMagang = await PermintaanMagang.findByPk(id);
 
     if (!permintaanMagang) {
@@ -207,12 +428,10 @@ const approveStatusPermintaanMagang = async (req, res) => {
     permintaanMagang.statusPermohonan = "disetujui";
     await permintaanMagang.save();
 
-    res
-      .status(200)
-      .json({
-        message: "Status permintaan magang berhasil diperbarui.",
-        permintaanMagang,
-      });
+    res.status(200).json({
+      message: "Status permintaan magang berhasil diperbarui.",
+      permintaanMagang,
+    });
   } catch (error) {
     console.error(
       "Error in updateStatusPermintaanMagang:",
@@ -241,12 +460,13 @@ const deletePermintaanMagang = async (req, res) => {
     console.error("Error in deletePermintaanMagang:", error.message || error);
     res.status(500).json({ error: "Terjadi kesalahan pada server." });
   }
-}
+};
 
 module.exports = {
-  createPermintaanMagang,
+  createPermintaanMagangSiswa,
+  createPermintaanMagangMahasiswa,
   getAllPermintaanMagang,
-  getPermintaanMagangById,   
+  getPermintaanMagangById,
   approveStatusPermintaanMagang,
   deletePermintaanMagang,
   getMyPermintaanMagang,
