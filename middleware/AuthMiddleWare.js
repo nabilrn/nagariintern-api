@@ -124,7 +124,7 @@ const refreshToken = async (req, res) => {
     }
 
     const newToken = jwt.sign(
-      { id: user.id, email: user.email, roleId: user.role.id },
+      { id: user.id, email: user.email, roleId: user.roleId },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
