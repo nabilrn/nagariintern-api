@@ -9,8 +9,6 @@ const {
     getPermintaanMagangById,
     getMyPermintaanMagang,
     approveStatusPermintaanMagang,
-    deletePermintaanMagang,
-    getAllInstitusi
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');

@@ -9,6 +9,7 @@ const config = require(__dirname + '/config/config.js')[env];
 const indexRouter = require("./routes/index");
 const authRouter = require("./routes/auth");
 const proxyRouter = require("./routes/proxy");
+const adminRouter = require("./routes/admin");
 
 // Use CORS middleware
 app.use(cors());
@@ -28,6 +29,7 @@ app.get('/', (req, res) => {
 app.use("/", indexRouter);
 app.use("/auth", authRouter);
 app.use("/api", proxyRouter);
+app.use("/admin", adminRouter);
 
 // Start the server
 app.listen(port, () => {

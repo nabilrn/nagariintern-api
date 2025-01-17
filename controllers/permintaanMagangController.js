@@ -23,6 +23,7 @@ const createPermintaanMagangSiswa = async (req, res) => {
       tanggalSelesai,
     } = req.body;
 
+
     console.log(req.body);
 
     // Ambil ID pengguna yang sudah diverifikasi dari token
@@ -44,6 +45,7 @@ const createPermintaanMagangSiswa = async (req, res) => {
         error: "Semua field wajib diisi",
       });
     }
+
 
     if (
       !req.files ||
@@ -71,6 +73,7 @@ const createPermintaanMagangSiswa = async (req, res) => {
     const [smkRecord] = await Smk.findOrCreate({
       where: { name: smk },
       defaults: { name: smk },
+
     });
 
     await Siswa.create({
@@ -99,6 +102,7 @@ const createPermintaanMagangSiswa = async (req, res) => {
 
     // Create PermintaanMagang record
     const permintaanMagang = await Permintaan.create({
+
       userId,
       type: "siswa",
       smkId: smkRecord.id,
@@ -271,7 +275,6 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
     });
     console.log(permintaanMagang.id, ">>>>>>>>>>>>>>>>>>>>>>>");
 
-    // Prepare documents data
     const documents = [
       {
         permintaanId: permintaanMagang.id,
@@ -295,7 +298,6 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
       },
     ];
 
-    // Save all documents
     await Dokumen.bulkCreate(documents);
 
     // Send success response
@@ -333,17 +335,14 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
 
 const getMyPermintaanMagang = async (req, res) => {
   try {
-    // Ambil ID pengguna yang sudah diverifikasi dari token
     const userId = req.userId;
 
-    // Validasi jika userId tidak ada
     if (!userId) {
       return res.status(403).json({ error: "Pengguna tidak terverifikasi." });
     }
 
-    // Ambil semua permintaan magang yang dimiliki oleh pengguna yang sedang login
     const permintaanMagang = await PermintaanMagang.findOne({
-      where: { userId }, // Filter berdasarkan userId
+      where: { userId },
       include: [
         { model: Institusi, attributes: ["name"] },
         { model: Jurusan, attributes: ["name"] },
@@ -352,14 +351,12 @@ const getMyPermintaanMagang = async (req, res) => {
       ],
     });
 
-    // Jika tidak ada permintaan magang
     if (!permintaanMagang) {
       return res
         .status(404)
         .json({ message: "Tidak ada permintaan magang untuk pengguna ini." });
     }
 
-    // Kembalikan data permintaan magang
     res.status(200).json(permintaanMagang);
   } catch (error) {
     console.error("Error in getMyPermintaanMagang:", error.message || error);
