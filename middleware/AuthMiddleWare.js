@@ -24,7 +24,7 @@ const verifyToken = async (req, res, next) => {
             try {
                 const expiredToken = jwt.decode(token);
                 if (!expiredToken?.id) {
-                    return res.status(401).json({ 
+                    return res.status(401).json({
                         error: 'Invalid token format',
                         message: 'Please login again'
                     });
@@ -32,15 +32,15 @@ const verifyToken = async (req, res, next) => {
 
 
                 // Find user and check refresh token
-                const user = await Users.findOne({ 
-                    where: { 
+                const user = await Users.findOne({
+                    where: {
                         id: expiredToken.id,
-                    } 
+                    }
 
                 });
 
                 if (!user || !user.refreshToken) {
-                    return res.status(401).json({ 
+                    return res.status(401).json({
                         error: 'No refresh token found',
                         message: 'Please login again to refresh your session'
                     });
@@ -51,21 +51,21 @@ const verifyToken = async (req, res, next) => {
                 } catch (refreshErr) {
                     user.refreshToken = null;
                     await user.save();
-                    
-                    return res.status(401).json({ 
+
+                    return res.status(401).json({
                         error: 'Refresh token expired',
                         message: 'Please login again to refresh your session'
                     });
                 }
 
                 const newToken = jwt.sign(
-                    { id: user.id, email: user.email, roleId: user.role.id }, 
-                    process.env.JWT_SECRET, 
+                    { id: user.id, email: user.email, roleId: user.roleId },
+                    process.env.JWT_SECRET,
                     { expiresIn: '1h' }
                 );
                 const newRefreshToken = jwt.sign(
-                    { id: user.id }, 
-                    process.env.JWT_SECRET, 
+                    { id: user.id },
+                    process.env.JWT_SECRET,
                     { expiresIn: '7d' }
                 );
 
@@ -81,14 +81,14 @@ const verifyToken = async (req, res, next) => {
                 next();
             } catch (refreshErr) {
                 console.error('Refresh token error:', refreshErr);
-                return res.status(401).json({ 
+                return res.status(401).json({
                     error: 'Failed to refresh token',
                     message: 'Please login again to refresh your session'
                 });
             }
         } else {
             console.error('Token verification error:', err);
-            return res.status(500).json({ 
+            return res.status(500).json({
                 error: 'Failed to authenticate token',
                 message: 'Authentication failed. Please try again.'
             });
@@ -100,7 +100,7 @@ const refreshToken = async (req, res) => {
     try {
         const currentRefreshToken = req.body.refreshToken;
         if (!currentRefreshToken) {
-            return res.status(403).json({ 
+            return res.status(403).json({
                 error: 'No refresh token provided',
                 message: 'Please provide a refresh token'
             });
@@ -108,28 +108,30 @@ const refreshToken = async (req, res) => {
 
         const decoded = jwt.verify(currentRefreshToken, process.env.JWT_SECRET);
 
-        const user = await Users.findOne({ 
-            where: { 
+        const user = await Users.findOne({
+            where: {
                 id: decoded.id,
                 refreshToken: currentRefreshToken
 
+            }
         });
 
+
         if (!user) {
-            return res.status(403).json({ 
+            return res.status(403).json({
                 error: 'Invalid refresh token',
                 message: 'Please login again to refresh your session'
             });
         }
 
         const newToken = jwt.sign(
-            { id: user.id, email: user.email, roleId: user.role.id }, 
-            process.env.JWT_SECRET, 
+            { id: user.id, email: user.email, roleId: user.roleId },
+            process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
         const newRefreshToken = jwt.sign(
-            { id: user.id }, 
-            process.env.JWT_SECRET, 
+            { id: user.id },
+            process.env.JWT_SECRET,
             { expiresIn: '7d' }
         );
 
@@ -143,14 +145,14 @@ const refreshToken = async (req, res) => {
         });
     } catch (err) {
         if (err.name === 'TokenExpiredError') {
-            return res.status(401).json({ 
+            return res.status(401).json({
                 error: 'Refresh token expired',
                 message: 'Please login again to refresh your session'
             });
         }
-        
+
         console.error('Refresh token error:', err);
-        return res.status(500).json({ 
+        return res.status(500).json({
             error: 'Failed to refresh token',
             message: 'Authentication failed. Please try again.'
         });
