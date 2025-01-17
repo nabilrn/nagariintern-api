@@ -193,22 +193,22 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
     // Ambil ID pengguna yang sudah diverifikasi dari token
     const userId = req.userId;
 
-    // // Input validation
-    // if (
-    //   !nama ||
-    //   !nisn ||
-    //   !alamat ||
-    //   !noHp ||
-    //   !smk ||
-    //   !jurusan ||
-    //   !unitKerja ||
-    //   !tanggalMulai ||
-    //   !tanggalSelesai
-    // ) {
-    //   return res.status(400).json({
-    //     error: "Semua field wajib diisi",
-    //   });
-    // }
+    // Input validation
+    if (
+      !nama ||
+      !nim ||
+      !alamat ||
+      !noHp ||
+      !perguruanTinggi ||
+      !prodi ||
+      !unitKerja ||
+      !tanggalMulai ||
+      !tanggalSelesai
+    ) {
+      return res.status(400).json({
+        error: "Semua field wajib diisi",
+      });
+    }
 
     if (
       !req.files ||
@@ -258,11 +258,10 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
     console.log(prodiRecord, ">>>>>>>>>>>>>>>>>>>>>>>");
 
     // Create or find unit kerja record
-    const [unitKerjaRecord] = await UnitKerja.findOrCreate({
-      where: { name: unitKerja },
-      defaults: { name: unitKerja },
+    const unitKerjaRecord = await UnitKerja.findOne({
+      where: { id: unitKerja },
+      defaults: { id: unitKerja },
     });
-
     // Create PermintaanMagang record
     const permintaanMagang = await Permintaan.create({
       userId,
@@ -309,7 +308,7 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
         nama,
         perguruangTinggi: perguruanTinggiRecord.name,
         prodi: prodiRecord.name,
-        unitKerja: unitKerjaRecord.name,
+        unitKerja: unitKerjaRecord.name, // Ensure name is included
         tanggalMulai,
         tanggalSelesai,
         status: permintaanMagang.status,
@@ -527,7 +526,7 @@ const getAllPermintaanMagang = async (req, res) => {
         tanggalMulai: item.tanggalMulai,
         tanggalSelesai: item.tanggalSelesai,
         status: item.Status.name,
-        unitKerja: item.UnitKerja.name,
+        unitKerja: item.UnitKerja,
         dokumen: item.Dokumens.map(doc => ({
           tipe: doc.tipeDokumen.name,
           url: doc.url
@@ -584,20 +583,21 @@ const getPermintaanMagangById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const permintaanMagang = await PermintaanMagang.findByPk(id, {
+    const permintaanMagang = await Permintaan.findByPk(id, {
       include: [
-        { model: User, as: "user", attributes: ["email", "nama"] },
-        { model: Institusi, attributes: ["name"] },
+        { model: Users, attributes: ["email"] },
+        { model: Smk, attributes: ["name"] },
         { model: Jurusan, attributes: ["name"] },
-        { model: Divisi, attributes: ["name"] },
-        { model: Dokumen, attributes: ["tipeDokumen", "url"] },
+        { model: UnitKerja, attributes: ["name"] },
+        { model: Dokumen, include: [{ model: TipeDokumen, as: "tipeDokumen", attributes: ["name"] }] },
+        { model: PerguruanTinggi, attributes: ["name"] },
+        { model: Prodi, attributes: ["name"] },
+        { model: Status, attributes: ["name"] },
       ],
     });
 
     if (!permintaanMagang) {
-      return res
-        .status(404)
-        .json({ error: "Permintaan magang tidak ditemukan." });
+      return res.status(404).json({ error: "Permintaan magang tidak ditemukan." });
     }
 
     res.status(200).json(permintaanMagang);
