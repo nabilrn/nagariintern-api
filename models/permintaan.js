@@ -17,9 +17,11 @@ module.exports = (sequelize, DataTypes) => {
       Permintaan.belongsTo(models.Jurusan, { foreignKey : 'jurusanId' });
       Permintaan.belongsTo(models.UnitKerja, { foreignKey : 'unitKerjaId' });
       Permintaan.belongsTo(models.Status, { foreignKey : 'statusId' });
+      Permintaan.belongsTo(models.UnitKerja, { foreignKey : 'penempatan' });
       Permintaan.hasMany(models.Kehadiran, { foreignKey : 'permintaanId' });
       Permintaan.hasMany(models.Dokumen, { foreignKey : 'permintaanId' });
       Permintaan.hasMany(models.SuratBalasan, { foreignKey : 'permintaanId' });
+      
     }
   }
   Permintaan.init({
@@ -92,7 +94,14 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    
+    penempatan : {
+      type : DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'UnitKerja',
+        key: 'id'
+      }
+    },
 
 
 
