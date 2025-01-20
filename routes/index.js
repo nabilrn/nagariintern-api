@@ -9,9 +9,11 @@ const {
     getPermintaanMagangById,
     getMyPermintaanMagang,
     approveStatusPermintaanMagang,
+    
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
+const { permintaanDiterima, getDetailPermintaanDiterima } = require('../controllers/SuperAdminController');
 
   
 // Basic route
@@ -27,7 +29,7 @@ router.post('/intern/siswa', verifyToken, uploadFields, createPermintaanMagangSi
 // Endpoint untuk mendapatkan semua permintaan magang
 router.get('/intern', verifyToken, getAllPermintaanMagang);
 
-
+router.get('/diterima', verifyToken, permintaanDiterima)
 router.get('/my-intern', verifyToken,getMyPermintaanMagang);
 
 // Endpoint untuk mendapatkan permintaan magang berdasarkan ID
@@ -37,6 +39,7 @@ router.get('/intern/:id', getPermintaanMagangById);
 router.patch('/intern/:id/approve', approveStatusPermintaanMagang);
 router.patch('/intern/:id/reject', approveStatusPermintaanMagang);
 
+router.get('/intern/diterima/detail', verifyToken, getDetailPermintaanDiterima);
 // // Endpoint untuk menghapus permintaan magang
 // router.delete('intern/:id', deletePermintaanMagang);
 module.exports = router;
