@@ -511,7 +511,7 @@ const getAllPermintaanMagang = async (req, res) => {
           url: doc.url
         })),
         createdAt: item.createdAt
-      };y
+      };
 
       // Add user details based on type
       if (item.type === 'siswa') {
@@ -589,6 +589,7 @@ const getPermintaanMagangById = async (req, res) => {
 const approveStatusPermintaanMagang = async (req, res) => {
   try {
     const { id } = req.params;
+    const { penempatan } = req.body;
 
     const permintaanMagang = await Permintaan.findByPk(id);
 
@@ -598,9 +599,25 @@ const approveStatusPermintaanMagang = async (req, res) => {
         .json({ error: "Permintaan magang tidak ditemukan." });
     }
 
+    // Validate penempatan exists in UnitKerja
+    if (penempatan) {
+      const unitKerja = await UnitKerja.findByPk(penempatan);
+      if (!unitKerja) {
+        return res.status(400).json({ error: "Unit kerja penempatan tidak valid" });
+      }
+    }
+
     // Update status to approved (assuming status ID 2 is for approved state)
-    permintaanMagang.statusId = 2;
-    await permintaanMagang.save();
+    const updateData = {
+      statusId: 2
+    };
+
+    // Add penempatan to update data if provided
+    if (penempatan) {
+      updateData.penempatan = penempatan; // This will store the UnitKerja id
+    }
+
+    await permintaanMagang.update(updateData);
 
     res.status(200).json({
       message: "Status permintaan magang berhasil diperbarui.",
