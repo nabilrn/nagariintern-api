@@ -49,19 +49,11 @@ const createPermintaanMagangSiswa = async (req, res) => {
       });
     }
 
-    if (
-      !req.files ||
-      !req.files.fileCv ||
-      !req.files.fileTranskrip ||
-      !req.files.fileKtp ||
-      !req.files.fileSuratPengantar
-    ) {
+    if (!req.files || !req.files.fileCv || !req.files.fileKtp) {
       return res.status(400).json({
-        error:
-          "Semua file wajib diunggah (CV, Transkrip, KTP, Surat Pengantar)",
+        error: "File CV dan KTP wajib diunggah",
       });
     }
-
     // Validate dates
     const startDate = new Date(tanggalMulai);
     const endDate = new Date(tanggalSelesai);
@@ -114,7 +106,7 @@ const createPermintaanMagangSiswa = async (req, res) => {
     });
     console.log(permintaanMagang.id, ">>>>>>>>>>>>>>>>>>>>>>>");
 
-    // Prepare documents data
+    
     const documents = [
       {
         permintaanId: permintaanMagang.id,
@@ -123,25 +115,12 @@ const createPermintaanMagangSiswa = async (req, res) => {
       },
       {
         permintaanId: permintaanMagang.id,
-        tipeDokumenId: 3,
-        url: req.files.fileTranskrip[0].filename,
-      },
-      {
-        permintaanId: permintaanMagang.id,
-        tipeDokumenId: 4,
+        tipeDokumenId: 4, 
         url: req.files.fileKtp[0].filename,
-      },
-      {
-        permintaanId: permintaanMagang.id,
-        tipeDokumenId: 2,
-        url: req.files.fileSuratPengantar[0].filename,
-      },
+      }
     ];
-
-    // Save all documents
     await Dokumen.bulkCreate(documents);
 
-    // Send success response
     res.status(201).json({
       message: "Permintaan magang berhasil dibuat",
       data: {
@@ -532,7 +511,7 @@ const getAllPermintaanMagang = async (req, res) => {
           url: doc.url
         })),
         createdAt: item.createdAt
-      };
+      };y
 
       // Add user details based on type
       if (item.type === 'siswa') {
@@ -611,7 +590,7 @@ const approveStatusPermintaanMagang = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const permintaanMagang = await PermintaanMagang.findByPk(id);
+    const permintaanMagang = await Permintaan.findByPk(id);
 
     if (!permintaanMagang) {
       return res
@@ -619,16 +598,17 @@ const approveStatusPermintaanMagang = async (req, res) => {
         .json({ error: "Permintaan magang tidak ditemukan." });
     }
 
-    permintaanMagang.statusPermohonan = "disetujui";
+    // Update status to approved (assuming status ID 2 is for approved state)
+    permintaanMagang.statusId = 2;
     await permintaanMagang.save();
 
     res.status(200).json({
       message: "Status permintaan magang berhasil diperbarui.",
-      permintaanMagang,
+      data: permintaanMagang,
     });
   } catch (error) {
     console.error(
-      "Error in updateStatusPermintaanMagang:",
+      "Error in approveStatusPermintaanMagang:",
       error.message || error
     );
     res.status(500).json({ error: "Terjadi kesalahan pada server." });
