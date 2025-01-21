@@ -104,8 +104,6 @@ const createPermintaanMagangSiswa = async (req, res) => {
       unitKerjaId: unitKerjaRecord.id,
       statusId: 1,
     });
-    console.log(permintaanMagang.id, ">>>>>>>>>>>>>>>>>>>>>>>");
-
     
     const documents = [
       {
