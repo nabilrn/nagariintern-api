@@ -591,6 +591,7 @@ const approveStatusPermintaanMagang = async (req, res) => {
     const { id } = req.params;
     const { penempatan } = req.body;
 
+    console.log(req.body);
     const permintaanMagang = await Permintaan.findByPk(id);
 
     if (!permintaanMagang) {
