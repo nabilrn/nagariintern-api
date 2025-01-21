@@ -23,11 +23,10 @@ const getAllUnitKerja = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
 const editKuotaUnitKerja = async (req, res) => {
   try {
     const { id } = req.params;
-    const { kuotaMhs, kuotaSiswa } = req.body;
+    const { tipe_cabang } = req.body;
 
     const unitKerja = await UnitKerja.findByPk(id);
 
@@ -35,18 +34,46 @@ const editKuotaUnitKerja = async (req, res) => {
       return res.status(404).json({ error: "Unit kerja tidak ditemukan." });
     }
 
-    unitKerja.kuotaMhs = kuotaMhs;
-    unitKerja.kuotaSiswa = kuotaSiswa;
+    // Validate tipe_cabang
+    if (!['pusat', 'utama', 'a', 'b', 'c'].includes(tipe_cabang.toLowerCase())) {
+      return res.status(400).json({ error: "Tipe cabang tidak valid." });
+    }
+
+    // Get default kuota based on tipe_cabang
+    let kuota;
+    switch (tipe_cabang.toLowerCase()) {
+      case 'pusat':
+        kuota = { kuotaMhs: 16, kuotaSiswa: 0 };
+        break;
+      case 'utama':
+        kuota = { kuotaMhs: 25, kuotaSiswa: 0 };
+        break;
+      case 'a':
+        kuota = { kuotaMhs: 10, kuotaSiswa: 8 };
+        break;
+      case 'b':
+        kuota = { kuotaMhs: 8, kuotaSiswa: 3 };
+        break;
+      case 'c':
+        kuota = { kuotaMhs: 5, kuotaSiswa: 2 };
+        break;
+    }
+
+    // Update unit kerja with default kuota
+    unitKerja.kuotaMhs = kuota.kuotaMhs;
+    unitKerja.kuotaSiswa = kuota.kuotaSiswa;
+    unitKerja.tipe_cabang = tipe_cabang;
     await unitKerja.save();
 
     return res.status(200).json({
-      message: "Kuota unit kerja berhasil diperbarui.",
+      message: "Unit kerja berhasil diperbarui.",
       unitKerja,
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };
+
 
 const generateLetter = async (req, res) => {
   const {
@@ -123,7 +150,7 @@ const generateLetter = async (req, res) => {
 
   return outputPath;
 };
-const permintaanDiverifikasi = async (req, res) => {
+const permintaanDiterima = async (req, res) => {
   try {
     // Get universities data with count of accepted requests per prodi
     const universitiesData = await PerguruanTinggi.findAll({
@@ -476,7 +503,7 @@ const detailSmkDiverifikasi = async (req, res) => {
 module.exports = {
   getAllUnitKerja,
   editKuotaUnitKerja,
-  permintaanDiverifikasi,
+  permintaanDiterima,
   detailUnivDiverifikasi,
   detailSmkDiverifikasi,
   getDetailPermintaanDiterima,

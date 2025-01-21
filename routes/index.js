@@ -13,7 +13,7 @@ const {
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
-const { permintaanDiverifikasi,detailUnivDiverifikasi,detailSmkDiverifikasi } = require('../controllers/SuperAdminController');
+const { permintaanDiterima,detailUnivDiverifikasi,detailSmkDiverifikasi } = require('../controllers/SuperAdminController');
 
   
 // Basic route
@@ -29,9 +29,9 @@ router.post('/intern/siswa', verifyToken, uploadFields, createPermintaanMagangSi
 // Endpoint untuk mendapatkan semua permintaan magang
 router.get('/intern', verifyToken, getAllPermintaanMagang);
 
-router.get('/intern/diverifikasi', verifyToken, permintaanDiverifikasi)
-router.get('/intern/diverifikasi/univ/:idUniv/:idProdi', detailUnivDiverifikasi)
-router.get('/intern/diverifikasi/smk/:idSmk', detailSmkDiverifikasi)
+router.get('/intern/diterima', verifyToken, permintaanDiterima)
+router.get('/intern/diterima/univ/:idUniv/:idProdi', detailUnivDiverifikasi)
+router.get('/intern/diterima/smk/:idSmk', detailSmkDiverifikasi)
 
 router.get('/my-intern', verifyToken,getMyPermintaanMagang);
 

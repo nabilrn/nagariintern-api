@@ -34,6 +34,10 @@ module.exports = (sequelize, DataTypes) => {
       type : DataTypes.INTEGER,
       allowNull: true,
     },
+    tipe_cabang: {
+      type : DataTypes.ENUM('pusat', 'utama', 'a', 'b', 'c'),
+      allowNull : true
+    },
   }, {
     sequelize,
     modelName: 'UnitKerja',
