@@ -10,18 +10,24 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      Permintaan.belongsTo(models.Users, { foreignKey : 'userId' });
-      Permintaan.belongsTo(models.PerguruanTinggi, { foreignKey : 'ptId' });
-      Permintaan.belongsTo(models.Prodi, { foreignKey : 'prodiId' });
-      Permintaan.belongsTo(models.Smk, { foreignKey : 'smkId' });
-      Permintaan.belongsTo(models.Jurusan, { foreignKey : 'jurusanId' });
-      Permintaan.belongsTo(models.UnitKerja, { foreignKey : 'unitKerjaId' });
-      Permintaan.belongsTo(models.Status, { foreignKey : 'statusId' });
-      Permintaan.belongsTo(models.UnitKerja, { foreignKey : 'penempatan' });
-      Permintaan.hasMany(models.Kehadiran, { foreignKey : 'permintaanId' });
-      Permintaan.hasMany(models.Dokumen, { foreignKey : 'permintaanId' });
-      Permintaan.hasMany(models.SuratBalasan, { foreignKey : 'permintaanId' });
-      
+      Permintaan.belongsTo(models.Users, { foreignKey: 'userId' });
+      Permintaan.belongsTo(models.PerguruanTinggi, { foreignKey: 'ptId' });
+      Permintaan.belongsTo(models.Prodi, { foreignKey: 'prodiId' });
+      Permintaan.belongsTo(models.Smk, { foreignKey: 'smkId' });
+      Permintaan.belongsTo(models.Jurusan, { foreignKey: 'jurusanId' });
+      // Tambahkan alias untuk relasi UnitKerja
+      Permintaan.belongsTo(models.UnitKerja, { 
+        foreignKey: 'unitKerjaId',
+        as: 'UnitKerjaPengajuan'  // Alias untuk unit kerja yang diajukan
+      });
+      Permintaan.belongsTo(models.UnitKerja, { 
+        foreignKey: 'penempatan',
+        as: 'UnitKerjaPenempatan'  // Alias untuk unit kerja penempatan
+      });
+      Permintaan.belongsTo(models.Status, { foreignKey: 'statusId' });
+      Permintaan.hasMany(models.Kehadiran, { foreignKey: 'permintaanId' });
+      Permintaan.hasMany(models.Dokumen, { foreignKey: 'permintaanId' });
+      Permintaan.hasMany(models.SuratBalasan, { foreignKey: 'permintaanId' }); 
     }
   }
   Permintaan.init({

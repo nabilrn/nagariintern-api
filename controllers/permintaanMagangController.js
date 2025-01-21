@@ -315,7 +315,7 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
 const getMyPermintaanMagang = async (req, res) => {
   try {
     const userId = req.userId;
-
+ 
     const permintaan = await Permintaan.findOne({
       where: {
         userId: userId,
@@ -341,10 +341,17 @@ const getMyPermintaanMagang = async (req, res) => {
         },
         {
           model: UnitKerja,
+          as: 'UnitKerjaPengajuan',
+          attributes: ["name"],
+        },
+        {
+          model: UnitKerja,
+          as: 'UnitKerjaPenempatan', 
           attributes: ["name"],
         },
         {
           model: Dokumen,
+          required: false,
           include: [
             {
               model: TipeDokumen,
@@ -371,13 +378,13 @@ const getMyPermintaanMagang = async (req, res) => {
         },
       ],
     });
-
+ 
     if (!permintaan) {
       return res.status(404).json({
         message: "Data permintaan magang tidak ditemukan",
       });
     }
-
+ 
     // Transform the data based on type
     const transformedData = {
       id: permintaan.id,
@@ -387,19 +394,20 @@ const getMyPermintaanMagang = async (req, res) => {
       tanggalMulai: permintaan.tanggalMulai,
       tanggalSelesai: permintaan.tanggalSelesai,
       status: permintaan.Status.name,
-      unitKerja: permintaan.UnitKerja.name,
-      dokumen: permintaan.Dokumens.map((doc) => ({
-        tipe: doc.tipeDokumen.name,
+      unitKerja: permintaan.UnitKerjaPengajuan?.name || null,
+      penempatan: permintaan.UnitKerjaPenempatan?.name || null,
+      dokumen: permintaan.Dokumens ? permintaan.Dokumens.map((doc) => ({
+        tipe: doc.tipeDokumen?.name || null,
         url: doc.url,
-      })),
+      })) : [],
       createdAt: permintaan.createdAt,
     };
-
+ 
     // Add user details based on type
     if (permintaan.type === "siswa") {
-      const siswa = permintaan.User.Siswas[0];
-      transformedData.institusi = permintaan.Smk?.name;
-      transformedData.jurusan = permintaan.Jurusan?.name;
+      const siswa = permintaan.User?.Siswas?.[0];
+      transformedData.institusi = permintaan.Smk?.name || null;
+      transformedData.jurusan = permintaan.Jurusan?.name || null;
       if (siswa) {
         transformedData.biodata = {
           nama: siswa.name,
@@ -409,9 +417,9 @@ const getMyPermintaanMagang = async (req, res) => {
         };
       }
     } else if (permintaan.type === "mahasiswa") {
-      const mahasiswa = permintaan.User.Mahasiswas[0];
-      transformedData.institusi = permintaan.PerguruanTinggi?.name;
-      transformedData.jurusan = permintaan.Prodi?.name;
+      const mahasiswa = permintaan.User?.Mahasiswas?.[0];
+      transformedData.institusi = permintaan.PerguruanTinggi?.name || null;
+      transformedData.jurusan = permintaan.Prodi?.name || null;
       if (mahasiswa) {
         transformedData.biodata = {
           nama: mahasiswa.name,
@@ -421,7 +429,7 @@ const getMyPermintaanMagang = async (req, res) => {
         };
       }
     }
-
+ 
     res.status(200).json({
       message: "Data permintaan magang berhasil diambil",
       data: transformedData,
@@ -433,7 +441,7 @@ const getMyPermintaanMagang = async (req, res) => {
       error: error.message,
     });
   }
-};
+ };
 
 const getAllPermintaanMagang = async (req, res) => {
   try {
@@ -459,10 +467,17 @@ const getAllPermintaanMagang = async (req, res) => {
         },
         {
           model: UnitKerja,
+          as: 'UnitKerjaPengajuan',
+          attributes: ['name']
+        },
+        {
+          model: UnitKerja,
+          as: 'UnitKerjaPenempatan',
           attributes: ['name']
         },
         {
           model: Dokumen,
+          required: false,
           include: [{
             model: TipeDokumen,
             as: 'tipeDokumen',
@@ -495,7 +510,6 @@ const getAllPermintaanMagang = async (req, res) => {
       });
     }
 
-    // Transform the data based on type
     const transformedData = permintaan.map(item => {
       const baseData = {
         id: item.id,
@@ -505,19 +519,19 @@ const getAllPermintaanMagang = async (req, res) => {
         tanggalMulai: item.tanggalMulai,
         tanggalSelesai: item.tanggalSelesai,
         status: item.Status.name,
-        unitKerja: item.UnitKerja,
-        dokumen: item.Dokumens.map(doc => ({
-          tipe: doc.tipeDokumen.name,
+        unitKerja: item.UnitKerjaPengajuan?.name || null,
+        penempatan: item.UnitKerjaPenempatan?.name || null,
+        dokumen: item.Dokumens ? item.Dokumens.map(doc => ({
+          tipe: doc.tipeDokumen?.name || null,
           url: doc.url
-        })),
+        })) : [],
         createdAt: item.createdAt
       };
 
-      // Add user details based on type
       if (item.type === 'siswa') {
-        const siswa = item.User.Siswas[0];
-        baseData.institusi = item.Smk?.name;
-        baseData.jurusan = item.Jurusan?.name;
+        const siswa = item.User?.Siswas?.[0];
+        baseData.institusi = item.Smk?.name || null;
+        baseData.jurusan = item.Jurusan?.name || null;
         if (siswa) {
           baseData.biodata = {
             nama: siswa.name,
@@ -527,9 +541,9 @@ const getAllPermintaanMagang = async (req, res) => {
           };
         }
       } else if (item.type === 'mahasiswa') {
-        const mahasiswa = item.User.Mahasiswas[0];
-        baseData.institusi = item.PerguruanTinggi?.name;
-        baseData.jurusan = item.Prodi?.name;
+        const mahasiswa = item.User?.Mahasiswas?.[0];
+        baseData.institusi = item.PerguruanTinggi?.name || null;
+        baseData.jurusan = item.Prodi?.name || null;
         if (mahasiswa) {
           baseData.biodata = {
             nama: mahasiswa.name,
@@ -564,11 +578,41 @@ const getPermintaanMagangById = async (req, res) => {
 
     const permintaanMagang = await Permintaan.findByPk(id, {
       include: [
-        { model: Users, attributes: ["email"] },
+        { 
+          model: Users, 
+          attributes: ["email"],
+          include: [
+            {
+              model: Siswa,
+              attributes: ['name', 'nisn', 'no_hp', 'alamat']
+            },
+            {
+              model: Mahasiswa,
+              attributes: ['name', 'nim', 'no_hp', 'alamat']
+            }
+          ]
+        },
         { model: Smk, attributes: ["name"] },
         { model: Jurusan, attributes: ["name"] },
-        { model: UnitKerja, attributes: ["name"] },
-        { model: Dokumen, include: [{ model: TipeDokumen, as: "tipeDokumen", attributes: ["name"] }] },
+        { 
+          model: UnitKerja,
+          as: 'UnitKerjaPengajuan',
+          attributes: ["name"]
+        },
+        { 
+          model: UnitKerja,
+          as: 'UnitKerjaPenempatan',
+          attributes: ["name"]
+        },
+        { 
+          model: Dokumen, 
+          required: false,
+          include: [{ 
+            model: TipeDokumen, 
+            as: "tipeDokumen", 
+            attributes: ["name"] 
+          }] 
+        },
         { model: PerguruanTinggi, attributes: ["name"] },
         { model: Prodi, attributes: ["name"] },
         { model: Status, attributes: ["name"] },
@@ -576,13 +620,19 @@ const getPermintaanMagangById = async (req, res) => {
     });
 
     if (!permintaanMagang) {
-      return res.status(404).json({ error: "Permintaan magang tidak ditemukan." });
+      return res.status(404).json({ 
+        message: "Permintaan magang tidak ditemukan." 
+      });
     }
 
     res.status(200).json(permintaanMagang);
+
   } catch (error) {
     console.error("Error in getPermintaanMagangById:", error.message || error);
-    res.status(500).json({ error: "Terjadi kesalahan pada server." });
+    res.status(500).json({ 
+      message: "Terjadi kesalahan pada server.",
+      error: error.message
+    });
   }
 };
 
