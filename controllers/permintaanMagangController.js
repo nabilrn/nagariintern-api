@@ -654,6 +654,23 @@ const approveStatusPermintaanMagang = async (req, res) => {
       if (!unitKerja) {
         return res.status(400).json({ error: "Unit kerja penempatan tidak valid" });
       }
+
+      // Check and update quota based on internship type
+      if (permintaanMagang.type === 'siswa') {
+        if (unitKerja.kuotaSiswa <= 0) {
+          return res.status(400).json({ error: "Kuota siswa magang sudah penuh" });
+        }
+        await unitKerja.update({
+          kuotaSiswa: unitKerja.kuotaSiswa - 1
+        });
+      } else if (permintaanMagang.type === 'mahasiswa') {
+        if (unitKerja.kuotaMhs <= 0) {
+          return res.status(400).json({ error: "Kuota mahasiswa magang sudah penuh" });
+        }
+        await unitKerja.update({
+          kuotaMhs: unitKerja.kuotaMhs - 1
+        });
+      }
     }
 
     // Update status to approved (assuming status ID 2 is for approved state)
@@ -663,7 +680,7 @@ const approveStatusPermintaanMagang = async (req, res) => {
 
     // Add penempatan to update data if provided
     if (penempatan) {
-      updateData.penempatan = penempatan; // This will store the UnitKerja id
+      updateData.penempatan = penempatan;
     }
 
     await permintaanMagang.update(updateData);

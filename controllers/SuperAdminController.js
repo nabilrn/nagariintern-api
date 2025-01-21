@@ -14,15 +14,52 @@ const {
   Siswa,
 } = require("../models");
 const sequelize = require("sequelize");
+const libre = require('libreoffice-convert');
+const util = require('util');
+const convert = util.promisify(libre.convert);
+
+const calculateAvailableQuota = async () => {
+  const unitKerjas = await UnitKerja.findAll();
+  const acceptedRequests = await Permintaan.findAll({
+    where: {
+      statusId: 2 
+    },
+    attributes: [
+      'unitKerjaId',
+      'type',
+      [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+    ],
+    group: ['unitKerjaId', 'type']
+  });
+
+  return unitKerjas.map(unit => {
+    const mhsCount = acceptedRequests.find(r =>
+      r.unitKerjaId === unit.id && r.type === 'mahasiswa'
+    )?.get('count') || 0;
+   
+    const siswaCount = acceptedRequests.find(r =>
+      r.unitKerjaId === unit.id && r.type === 'siswa'
+    )?.get('count') || 0;
+
+    return {
+      ...unit.toJSON(),
+      sisaKuotaMhs: unit.kuotaMhs - mhsCount,
+      sisaKuotaSiswa: unit.kuotaSiswa - siswaCount
+    };
+  });
+};
 
 const getAllUnitKerja = async (req, res) => {
   try {
-    const unitKerja = await UnitKerja.findAll();
-    return res.status(200).json(unitKerja);
+    const unitKerjaWithQuota = await calculateAvailableQuota();
+    return res.status(200).json({
+      unitKerja: unitKerjaWithQuota 
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };
+
 const editKuotaUnitKerja = async (req, res) => {
   try {
     const { id } = req.params;
@@ -281,7 +318,7 @@ const getDetailPermintaanDiterima = async (req, res) => {
       tanggal_selesai: item.tanggalSelesai,
       tanggal_daftar: item.createdAt,
     }));
-
+    
     return res.status(200).json({
       mahasiswa: formattedUniversities,
       siswa: formattedSchools,
@@ -429,17 +466,12 @@ const detailSmkDiverifikasi = async (req, res) => {
 const generateLetter = async (data) => {
   try {
     console.log("Generating letter...");
-
-    const content = fs.readFileSync(
-      path.resolve(__dirname, "template.docx"),
-      "binary"
-    );
+    const content = fs.readFileSync(path.resolve(__dirname, "template.docx"), "binary");
     const zip = new PizZip(content);
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
     });
-
     // Format tanggal sekarang
     const now = new Date();
     const formatShortDate = (date) => {
@@ -480,14 +512,13 @@ const generateLetter = async (data) => {
 
     doc.render(dataWithDates);
 
-    const buf = doc
-      .getZip()
-      .generate({ type: "nodebuffer", compression: "DEFLATE" });
-    const outputPath = `surat_magang_${Date.now()}.docx`;
-    fs.writeFileSync(outputPath, buf);
+    const docxBuf = doc.getZip().generate({ type: "nodebuffer" });
+    
+    // Convert to PDF
+    const pdfBuf = await convert(docxBuf, '.pdf', undefined);
+    
+    return pdfBuf;
 
-    console.log("Letter generated at:", outputPath);
-    return true; // Just return true instead of the filepath
   } catch (error) {
     console.error("Error in generateLetter:", error);
     throw error;
@@ -577,20 +608,19 @@ const univGenerateLetter = async (req, res) => {
       participants: participants,
     };
 
-    // Generate letter without returning the filepath
-    await generateLetter(data);
+    const pdfBuffer = await generateLetter(data);
 
-    // Send only success status
-    return res.status(200).json({
-      status: "success",
-      message: "Letter generated successfully",
-    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=surat_magang.pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+
   } catch (error) {
     console.error("Error:", error);
     return res.status(500).json({
       status: "error",
-      message: "Internal server error",
-      error: error.message,
+      message: "Internal server error", 
+      error: error.message
     });
   }
 };
