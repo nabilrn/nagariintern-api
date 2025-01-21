@@ -35,26 +35,28 @@ const editKuotaUnitKerja = async (req, res) => {
     }
 
     // Validate tipe_cabang
-    if (!['pusat', 'utama', 'a', 'b', 'c'].includes(tipe_cabang.toLowerCase())) {
+    if (
+      !["pusat", "utama", "a", "b", "c"].includes(tipe_cabang.toLowerCase())
+    ) {
       return res.status(400).json({ error: "Tipe cabang tidak valid." });
     }
 
     // Get default kuota based on tipe_cabang
     let kuota;
     switch (tipe_cabang.toLowerCase()) {
-      case 'pusat':
+      case "pusat":
         kuota = { kuotaMhs: 16, kuotaSiswa: 0 };
         break;
-      case 'utama':
+      case "utama":
         kuota = { kuotaMhs: 25, kuotaSiswa: 0 };
         break;
-      case 'a':
+      case "a":
         kuota = { kuotaMhs: 10, kuotaSiswa: 8 };
         break;
-      case 'b':
+      case "b":
         kuota = { kuotaMhs: 8, kuotaSiswa: 3 };
         break;
-      case 'c':
+      case "c":
         kuota = { kuotaMhs: 5, kuotaSiswa: 2 };
         break;
     }
@@ -74,82 +76,6 @@ const editKuotaUnitKerja = async (req, res) => {
   }
 };
 
-
-const generateLetter = async (req, res) => {
-  const {
-    nomorSurat,
-    perihal,
-    pejabat,
-    institusi,
-    departemen,
-    perihal_detail,
-    selectedIds, // Array of selected request IDs
-  } = req.body;
-  // Load template
-  const content = fs.readFileSync(
-    path.resolve(__dirname, "template.docx"),
-    "binary"
-  );
-  const zip = new PizZip(content);
-
-  // Data contoh
-  const data = {
-    noSurat: "001/2024",
-    pejabat: "Dekan Fakultas Teknik",
-    institusi: "Universitas Negeri Padang",
-    departemen: "Teknik Informatika",
-    perihal: "Permohonan Magang Mahasiswa",
-    students: [
-      {
-        nama_mahasiswa: "Budi Santoso",
-        nim: "19104410001",
-        penempatan: "Divisi IT",
-        periode: "1 Jan - 31 Mar 2025",
-      },
-      {
-        nama_mahasiswa: "Ani Widya",
-        nim: "19104410002",
-        penempatan: "Divisi Human Capital",
-        periode: "1 Jan - 31 Mar 2025",
-      },
-      {
-        nama_mahasiswa: "Charlie Putra",
-        nim: "19104410003",
-        penempatan: "Divisi Keuangan",
-        periode: "1 Jan - 31 Mar 2025",
-      },
-    ],
-  };
-
-  const doc = new Docxtemplater(zip, {
-    paragraphLoop: true,
-    linebreaks: true,
-  });
-
-  // Add row numbers to students
-  const dataWithNumbers = {
-    ...data,
-    students: data.students.map((student, index) => ({
-      no: index + 1,
-      ...student,
-    })),
-  };
-
-  // Render document
-  doc.render(dataWithNumbers);
-
-  // Generate buffer
-  const buf = doc.getZip().generate({
-    type: "nodebuffer",
-    compression: "DEFLATE",
-  });
-
-  // Save file
-  const outputPath = `surat_magang_${Date.now()}.docx`;
-  fs.writeFileSync(outputPath, buf);
-
-  return outputPath;
-};
 const permintaanDiterima = async (req, res) => {
   try {
     // Get universities data with count of accepted requests per prodi
@@ -440,7 +366,7 @@ const detailSmkDiverifikasi = async (req, res) => {
     const schoolsDetail = await Permintaan.findAll({
       where: {
         type: "siswa",
-        statusId: 2, 
+        statusId: 2,
         smkId: idSmk,
       },
       include: [
@@ -500,6 +426,175 @@ const detailSmkDiverifikasi = async (req, res) => {
   }
 };
 
+const generateLetter = async (data) => {
+  try {
+    console.log("Generating letter...");
+
+    const content = fs.readFileSync(
+      path.resolve(__dirname, "template.docx"),
+      "binary"
+    );
+    const zip = new PizZip(content);
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+    });
+
+    // Format tanggal sekarang
+    const now = new Date();
+    const formatShortDate = (date) => {
+      const month = date.getMonth() + 1; // Bulan dalam format 1-12
+      const year = date.getFullYear();
+      return `${month.toString().padStart(2, "0")}-${year}`; // Format MM-YYYY
+    };
+
+    const formatLongDate = (date) => {
+      const day = date.getDate();
+      const months = [
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember",
+      ];
+      return `${day} ${months[date.getMonth()]} ${date.getFullYear()}`; // Format DD MMMM YYYY
+    };
+
+    const dataWithDates = {
+      ...data,
+      jml: data.participants.length, // Add total count of participants
+      tanggal_singkat: formatShortDate(now), // Format MM-YYYY
+      tanggal_panjang: formatLongDate(now), // Format DD MMMM YYYY
+      students: data.participants.map((student, index) => ({
+        no: index + 1,
+        ...student,
+      })),
+    };
+
+    doc.render(dataWithDates);
+
+    const buf = doc
+      .getZip()
+      .generate({ type: "nodebuffer", compression: "DEFLATE" });
+    const outputPath = `surat_magang_${Date.now()}.docx`;
+    fs.writeFileSync(outputPath, buf);
+
+    console.log("Letter generated at:", outputPath);
+    return true; // Just return true instead of the filepath
+  } catch (error) {
+    console.error("Error in generateLetter:", error);
+    throw error;
+  }
+};
+
+
+const univGenerateLetter = async (req, res) => {
+  try {
+    const { idUniv, idProdi } = req.params;
+    const { nomorSurat, perihal, pejabat, institusi, prodi, perihal_detail } =
+      req.body;
+
+    const universitiesDetail = await Permintaan.findAll({
+      where: {
+        type: "mahasiswa",
+        statusId: 2,
+        ptId: idUniv,
+        prodiId: idProdi,
+      },
+      include: [
+        {
+          model: Users,
+          include: [
+            {
+              model: Mahasiswa,
+              attributes: ["name", "nim", "no_hp", "alamat"],
+              required: false,
+            },
+          ],
+          attributes: ["email"],
+          required: false,
+        },
+        {
+          model: PerguruanTinggi,
+          attributes: ["name"],
+        },
+        {
+          model: Prodi,
+          attributes: ["name"],
+        },
+        {
+          model: UnitKerja,
+          as: "UnitKerjaPenempatan",
+          attributes: ["name"],
+        },
+      ],
+      attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
+    });
+
+    const formatPeriod = (startDate, endDate) => {
+      const formatDate = (date) => {
+        const d = new Date(date);
+        const months = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+      };
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    };
+
+    const participants = universitiesDetail.map((item) => ({
+      nama_mahasiswa: item.User?.Mahasiswas?.[0]?.name || "",
+      nim: item.User?.Mahasiswas?.[0]?.nim || "",
+      penempatan: item.UnitKerjaPenempatan?.name || "",
+      periode: formatPeriod(item.tanggalMulai, item.tanggalSelesai),
+    }));
+
+    const data = {
+      noSurat: nomorSurat,
+      pejabat: pejabat,
+      institusi: institusi,
+      prodi: prodi,
+      perihal: perihal,
+      perihal_detail:perihal_detail,
+      participants: participants,
+    };
+
+    // Generate letter without returning the filepath
+    await generateLetter(data);
+
+    // Send only success status
+    return res.status(200).json({
+      status: "success",
+      message: "Letter generated successfully",
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllUnitKerja,
   editKuotaUnitKerja,
@@ -508,4 +603,5 @@ module.exports = {
   detailSmkDiverifikasi,
   getDetailPermintaanDiterima,
   generateLetter,
+  univGenerateLetter,
 };

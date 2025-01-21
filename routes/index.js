@@ -13,7 +13,7 @@ const {
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
-const { permintaanDiterima,detailUnivDiverifikasi,detailSmkDiverifikasi } = require('../controllers/SuperAdminController');
+const { permintaanDiterima,detailUnivDiverifikasi,detailSmkDiverifikasi,univGenerateLetter } = require('../controllers/SuperAdminController');
 
   
 // Basic route
@@ -32,6 +32,9 @@ router.get('/intern', verifyToken, getAllPermintaanMagang);
 router.get('/intern/diterima', verifyToken, permintaanDiterima)
 router.get('/intern/diterima/univ/:idUniv/:idProdi', detailUnivDiverifikasi)
 router.get('/intern/diterima/smk/:idSmk', detailSmkDiverifikasi)
+
+router.post('/intern/diterima/univ/:idUniv/:idProdi', univGenerateLetter)
+router.post('/intern/diterima/smk/:idSmk', detailSmkDiverifikasi)
 
 router.get('/my-intern', verifyToken,getMyPermintaanMagang);
 
