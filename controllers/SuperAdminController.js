@@ -18,6 +18,7 @@ const sequelize = require("sequelize");
 const libre = require('libreoffice-convert');
 const util = require('util');
 const convert = util.promisify(libre.convert);
+const nodemailer = require("nodemailer");
 
 const calculateAvailableQuota = async () => {
   const unitKerjas = await UnitKerja.findAll();
