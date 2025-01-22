@@ -104,14 +104,18 @@ const editKuotaUnitKerja = async (req, res) => {
     unitKerja.tipe_cabang = tipe_cabang;
     await unitKerja.save();
 
+    // Get updated data with available quota calculations
+    const unitKerjaWithQuota = await calculateAvailableQuota();
+    
     return res.status(200).json({
       message: "Unit kerja berhasil diperbarui.",
-      unitKerja,
+      unitKerja: unitKerjaWithQuota
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 };
+
 
 const permintaanDiterima = async (req, res) => {
   try {
