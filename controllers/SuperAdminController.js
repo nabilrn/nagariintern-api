@@ -12,7 +12,8 @@ const {
   Users,
   Mahasiswa,
   Siswa,
-} = require("../models");
+  Status
+} = require("../models/index");
 const sequelize = require("sequelize");
 const libre = require('libreoffice-convert');
 const util = require('util');
@@ -126,7 +127,8 @@ const permintaanDiterima = async (req, res) => {
           model: Permintaan,
           where: {
             type: "mahasiswa",
-            statusId: 2,
+            statusId: '2' // Convert to string if your statusId is stored as string
+            // Alternatively: statusId: parseInt(2) if you need it as integer
           },
           include: [
             {
@@ -134,6 +136,7 @@ const permintaanDiterima = async (req, res) => {
               attributes: ["id", "name"],
             },
           ],
+          required: true,
           attributes: [],
         },
       ],
@@ -163,8 +166,10 @@ const permintaanDiterima = async (req, res) => {
           model: Permintaan,
           where: {
             type: "siswa",
-            statusId: 2,
+            statusId: '2' // Convert to string if your statusId is stored as string
+            // Alternatively: statusId: parseInt(2) if you need it as integer
           },
+          required: true,
           attributes: [],
         },
       ],
@@ -180,18 +185,23 @@ const permintaanDiterima = async (req, res) => {
       raw: true,
     });
 
+    // Add error handling for empty results
+    if (!universitiesData.length && !schoolsData.length) {
+      return res.status(404).json({
+        message: "Data tidak ditemukan"
+      });
+    }
+
     // Restructure universities data to group by university
     const formattedUniversitiesData = universitiesData.reduce((acc, curr) => {
       const existingUniv = acc.find(
         (univ) => univ.nama_institusi === curr.name
       );
-
       const prodiData = {
         id_prodi: curr.prodi_id,
         nama_prodi: curr.prodi_name,
         total_diterima: parseInt(curr.total_diterima),
       };
-
       if (existingUniv) {
         existingUniv.prodi.push(prodiData);
       } else {
@@ -201,7 +211,6 @@ const permintaanDiterima = async (req, res) => {
           prodi: [prodiData],
         });
       }
-
       return acc;
     }, []);
 
@@ -214,7 +223,11 @@ const permintaanDiterima = async (req, res) => {
       })),
     });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    console.error("Error:", error);
+    return res.status(500).json({ 
+      message: "Terjadi kesalahan pada server.",
+      error: error.message 
+    });
   }
 };
 
@@ -469,66 +482,78 @@ const detailSmkDiverifikasi = async (req, res) => {
 
 const generateLetter = async (data) => {
   try {
-    console.log("Generating letter...");
-    const content = fs.readFileSync(path.resolve(__dirname, "template.docx"), "binary");
+    console.log("Generating letter with data:", JSON.stringify(data, null, 2));
+    // Choose template based on data structure - add logging
+    const templateFile = data.participants[0]?.nim ? "templateMhs.docx" : "templateSiswa.docx";
+    console.log("Using template:", templateFile);
+    
+    // Verify template exists
+    const templatePath = path.resolve(__dirname, templateFile);
+    if (!fs.existsSync(templatePath)) {
+      throw new Error(`Template file not found: ${templateFile}`);
+    }
+    
+    const content = fs.readFileSync(templatePath, "binary");
+    
     const zip = new PizZip(content);
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
     });
-    // Format tanggal sekarang
+
+    // Add template data validation
+    if (!data.participants || data.participants.length === 0) {
+      throw new Error("No participants data provided");
+    }
+
     const now = new Date();
     const formatShortDate = (date) => {
-      const month = date.getMonth() + 1; // Bulan dalam format 1-12
+      const month = date.getMonth() + 1;
       const year = date.getFullYear();
-      return `${month.toString().padStart(2, "0")}-${year}`; // Format MM-YYYY
+      return `${month.toString().padStart(2, "0")}-${year}`;
     };
 
     const formatLongDate = (date) => {
       const day = date.getDate();
       const months = [
-        "Januari",
-        "Februari",
-        "Maret",
-        "April",
-        "Mei",
-        "Juni",
-        "Juli",
-        "Agustus",
-        "September",
-        "Oktober",
-        "November",
-        "Desember",
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
       ];
-      return `${day} ${months[date.getMonth()]} ${date.getFullYear()}`; // Format DD MMMM YYYY
+      return `${day} ${months[date.getMonth()]} ${date.getFullYear()}`;
     };
 
     const dataWithDates = {
       ...data,
-      jml: data.participants.length, // Add total count of participants
-      tanggal_singkat: formatShortDate(now), // Format MM-YYYY
-      tanggal_panjang: formatLongDate(now), // Format DD MMMM YYYY
+      jml: data.participants.length,
+      tanggal_singkat: formatShortDate(now),
+      tanggal_panjang: formatLongDate(now),
       students: data.participants.map((student, index) => ({
         no: index + 1,
         ...student,
       })),
     };
 
+    console.log("Rendering template with data:", JSON.stringify(dataWithDates, null, 2));
     doc.render(dataWithDates);
 
     const docxBuf = doc.getZip().generate({ type: "nodebuffer" });
+    console.log("DOCX generated successfully");
     
-    // Convert to PDF
+    // Add PDF conversion logging
+    console.log("Converting to PDF...");
     const pdfBuf = await convert(docxBuf, '.pdf', undefined);
+    console.log("PDF conversion successful");
     
     return pdfBuf;
-
   } catch (error) {
-    console.error("Error in generateLetter:", error);
+    console.error("Detailed error in generateLetter:", {
+      message: error.message,
+      stack: error.stack,
+      data: JSON.stringify(data, null, 2)
+    });
     throw error;
   }
 };
-
 
 const univGenerateLetter = async (req, res) => {
   try {
@@ -628,6 +653,187 @@ const univGenerateLetter = async (req, res) => {
     });
   }
 };
+const smkGenerateLetter = async (req, res) => {
+  try {
+    const { idSmk } = req.params;
+    const { nomorSurat, perihal, pejabat, institusi, perihal_detail } = req.body;
+
+    console.log("Fetching SMK details for ID:", idSmk);
+    
+    const smkDetail = await Permintaan.findAll({
+      where: {
+        type: "siswa",
+        statusId: 2,
+        smkId: idSmk,
+      },
+      include: [
+        {
+          model: Users,
+          include: [
+            {
+              model: Siswa,
+              attributes: ["name", "nisn", "no_hp", "alamat"],
+              required: false,
+            },
+          ],
+          attributes: ["email"],
+          required: false,
+        },
+        {
+          model: Smk,
+          attributes: ["name"],
+        },
+        {
+          model: Jurusan,
+          attributes: ["name"],
+        },
+        {
+          model: UnitKerja,
+          as: "UnitKerjaPenempatan",
+          attributes: ["name"],
+        },
+      ],
+      attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
+    });
+
+    if (!smkDetail || smkDetail.length === 0) {
+      console.log("No SMK details found for ID:", idSmk);
+      return res.status(404).json({
+        status: "error",
+        message: "No data found for the specified SMK"
+      });
+    }
+
+    console.log("Found SMK details:", JSON.stringify(smkDetail, null, 2));
+
+    const formatPeriod = (startDate, endDate) => {
+      const formatDate = (date) => {
+        const d = new Date(date);
+        const months = [
+          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        ];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+      };
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    };
+
+    const participants = smkDetail.map((item) => ({
+      nama_siswa: item.User?.Siswas?.[0]?.name || "",
+      nisn: item.User?.Siswas?.[0]?.nisn || "",
+      penempatan: item.UnitKerjaPenempatan?.name || "",
+      periode: formatPeriod(item.tanggalMulai, item.tanggalSelesai),
+    }));
+
+    const data = {
+      noSurat: nomorSurat,
+      perihal: perihal,
+      pejabat: pejabat,
+      institusi: institusi,
+      perihal_detail: perihal_detail,
+      participants: participants,
+    };
+
+    console.log("Generating letter with data:", JSON.stringify(data, null, 2));
+    const pdfBuffer = await generateLetter(data);
+    console.log("PDF generated successfully, size:", pdfBuffer.length);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=surat_magang.pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error("Detailed error in smkGenerateLetter:", {
+      message: error.message,
+      stack: error.stack,
+      params: req.params,
+      body: req.body
+    });
+    
+    return res.status(500).json({
+      status: "error",
+      message: "Gagal membuat surat", 
+      error: error.message
+    });
+  }
+};
+
+const sendSuratBalasan = async (req, res) => {
+  try {
+    const { idPermintaan } = req.params;
+    const { email } = req.body;
+    const fileSuratBalasan = req.files.fileSuratBalasan;
+    
+    const permintaan = await Permintaan.findByPk(idPermintaan, {
+      include: [
+        {
+          model: Users,
+          attributes: ["email"],
+        },
+      ],
+    });
+    
+    if (!permintaan) {
+      return res.status(404).json({
+        status: "error",
+        message: "Permintaan magang tidak ditemukan",
+      });
+    }
+    
+    if (!fileSuratBalasan) {
+      return res.status(400).json({
+        status: "error",
+        message: "File surat balasan harus diunggah"
+      });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Surat Balasan Permintaan Magang",
+      text: "Berikut adalah surat balasan permintaan magang Anda.",
+      attachments: [
+        {
+          filename: fileSuratBalasan.name,
+          content: fileSuratBalasan.data
+        },
+      ],
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error sending email:", error);
+        return res.status(500).json({
+          status: "error",
+          message: "Gagal mengirim email",
+          error: error.message,
+        });
+      }
+      return res.status(200).json({
+        status: "success",
+        message: "Email berhasil dikirim",
+        info: info.response,
+      });
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 
 module.exports = {
   getAllUnitKerja,
@@ -638,4 +844,6 @@ module.exports = {
   getDetailPermintaanDiterima,
   generateLetter,
   univGenerateLetter,
+  smkGenerateLetter,
+  sendSuratBalasan
 };

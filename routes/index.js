@@ -13,7 +13,7 @@ const {
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
-const { permintaanDiterima,detailUnivDiverifikasi,detailSmkDiverifikasi,univGenerateLetter } = require('../controllers/SuperAdminController');
+const { permintaanDiterima,detailUnivDiverifikasi,detailSmkDiverifikasi,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan} = require('../controllers/SuperAdminController');
 
   
 // Basic route
@@ -34,7 +34,7 @@ router.get('/intern/diterima/univ/:idUniv/:idProdi', detailUnivDiverifikasi)
 router.get('/intern/diterima/smk/:idSmk', detailSmkDiverifikasi)
 
 router.post('/intern/diterima/univ/:idUniv/:idProdi', univGenerateLetter)
-router.post('/intern/diterima/smk/:idSmk', detailSmkDiverifikasi)
+// router.post('/intern/diterima/smk/:idSmk', detailSmkDiverifikasi)
 
 router.get('/my-intern', verifyToken,getMyPermintaanMagang);
 
@@ -43,7 +43,10 @@ router.get('/intern/:id', getPermintaanMagangById);
 
 // // Endpoint untuk memperbarui status permintaan magang
 router.patch('/intern/:id/approve', approveStatusPermintaanMagang);
+router.post('/intern/diterima/smk/:idSmk', smkGenerateLetter)
 router.patch('/intern/:id/reject', approveStatusPermintaanMagang);
+
+router.post('/intern/send-surat-balasan/:idPermintaan', verifyToken, uploadFields, sendSuratBalasan);
 // // Endpoint untuk menghapus permintaan magang
 // router.delete('intern/:id', deletePermintaanMagang);
 module.exports = router;
