@@ -447,7 +447,7 @@ const getAllPermintaanMagang = async (req, res) => {
       include: [
         {
           model: Status,
-          attributes: ['name']
+          
         },
         {
           model: Users,
@@ -516,7 +516,7 @@ const getAllPermintaanMagang = async (req, res) => {
         type: item.type,
         tanggalMulai: item.tanggalMulai,
         tanggalSelesai: item.tanggalSelesai,
-        status: item.Status.name,
+        status: item.Status,
         unitKerja: item.UnitKerjaPengajuan?.name || null,
         penempatan: item.UnitKerjaPenempatan?.name || null,
         dokumen: item.Dokumens ? item.Dokumens.map(doc => ({
@@ -671,22 +671,12 @@ const approveStatusPermintaanMagang = async (req, res) => {
           kuotaMhs: unitKerja.kuotaMhs - 1
         });
       }
+
+      await permintaanMagang.update({ penempatan });
     }
-
-    // Update status to approved (assuming status ID 2 is for approved state)
-    const updateData = {
-      statusId: 2
-    };
-
-    // Add penempatan to update data if provided
-    if (penempatan) {
-      updateData.penempatan = penempatan;
-    }
-
-    await permintaanMagang.update(updateData);
 
     res.status(200).json({
-      message: "Status permintaan magang berhasil diperbarui.",
+      message: "Penempatan magang berhasil diperbarui.",
       data: permintaanMagang,
     });
   } catch (error) {

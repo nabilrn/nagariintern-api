@@ -12,7 +12,8 @@ const {
   Users,
   Mahasiswa,
   Siswa,
-  Status
+  Status,
+  SuratBalasan
 } = require("../models/index");
 const sequelize = require("sequelize");
 const libre = require('libreoffice-convert');
@@ -128,8 +129,10 @@ const permintaanDiterima = async (req, res) => {
           model: Permintaan,
           where: {
             type: "mahasiswa",
-            statusId: '2' // Convert to string if your statusId is stored as string
-            // Alternatively: statusId: parseInt(2) if you need it as integer
+            statusId: 1,
+            penempatan: {
+              [sequelize.Op.not]: null
+            }
           },
           include: [
             {
@@ -167,8 +170,10 @@ const permintaanDiterima = async (req, res) => {
           model: Permintaan,
           where: {
             type: "siswa",
-            statusId: '2' // Convert to string if your statusId is stored as string
-            // Alternatively: statusId: parseInt(2) if you need it as integer
+            statusId: 1,
+            penempatan: {
+              [sequelize.Op.not]: null
+            }
           },
           required: true,
           attributes: [],
@@ -232,120 +237,8 @@ const permintaanDiterima = async (req, res) => {
   }
 };
 
-const getDetailPermintaanDiterima = async (req, res) => {
-  try {
-    // Get detailed university students data
-    const universitiesDetail = await Permintaan.findAll({
-      where: {
-        type: "mahasiswa",
-        statusId: 2, // Status diterima
-      },
-      include: [
-        {
-          model: Users,
-          include: [
-            {
-              model: Mahasiswa,
-              attributes: ["name", "nim", "no_hp", "alamat"],
-              required: false,
-            },
-          ],
-          attributes: ["email"],
-          required: false,
-        },
-        {
-          model: PerguruanTinggi,
-          attributes: ["name"],
-        },
-        {
-          model: Prodi,
-          attributes: ["name"],
-        },
-        {
-          model: UnitKerja,
-          as: "UnitKerjaPenempatan",
-          attributes: ["name"],
-        },
-      ],
-      attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
-    });
 
-    // Get detailed vocational students data
-    const schoolsDetail = await Permintaan.findAll({
-      where: {
-        type: "siswa",
-        statusId: 2, // Status diterima
-      },
-      include: [
-        {
-          model: Users,
-          include: [
-            {
-              model: Siswa,
-              attributes: ["name", "nisn", "no_hp", "alamat"],
-              required: false,
-            },
-          ],
-          attributes: ["email"],
-          required: false,
-        },
-        {
-          model: Smk,
-          attributes: ["name"],
-        },
-        {
-          model: Jurusan,
-          attributes: ["name"],
-        },
-        {
-          model: UnitKerja,
-          as: "UnitKerjaPenempatan",
-          attributes: ["name"],
-        },
-      ],
-      attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
-    });
 
-    const formattedUniversities = universitiesDetail.map((item) => ({
-      id: item.id,
-      nama_peserta: item.User?.Mahasiswas?.[0]?.name ?? null, // Changed to Mahasiswas
-      nim: item.User?.Mahasiswas?.[0]?.nim ?? null, // Changed to Mahasiswas
-      email: item.User?.email ?? null,
-      no_hp: item.User?.Mahasiswas?.[0]?.no_hp ?? null, // Changed to Mahasiswas
-      alamat: item.User?.Mahasiswas?.[0]?.alamat ?? null, // Changed to Mahasiswas
-      institusi: item.PerguruanTinggi?.name ?? null,
-      program_studi: item.Prodi?.name ?? null,
-      unit_kerja: item.UnitKerjaPenempatan?.name ?? null,
-      tanggal_mulai: item.tanggalMulai,
-      tanggal_selesai: item.tanggalSelesai,
-      tanggal_daftar: item.createdAt,
-    }));
-
-    // Format vocational students data
-    const formattedSchools = schoolsDetail.map((item) => ({
-      id: item.id,
-      nama_peserta: item.User?.Siswas?.[0]?.name ?? null, // Changed to Siswas
-      nisn: item.User?.Siswas?.[0]?.nisn ?? null, // Changed to Siswas
-      email: item.User?.email ?? null,
-      no_hp: item.User?.Siswas?.[0]?.no_hp ?? null, // Changed to Siswas
-      alamat: item.User?.Siswas?.[0]?.alamat ?? null, // Changed to Siswas
-      institusi: item.Smk?.name ?? null,
-      jurusan: item.Jurusan?.name ?? null,
-      unit_kerja: item.UnitKerjaPenempatan?.name ?? null,
-      tanggal_mulai: item.tanggalMulai,
-      tanggal_selesai: item.tanggalSelesai,
-      tanggal_daftar: item.createdAt,
-    }));
-    
-    return res.status(200).json({
-      mahasiswa: formattedUniversities,
-      siswa: formattedSchools,
-    });
-  } catch (error) {
-    console.error("Error:", error);
-    return res.status(500).json({ error: error.message });
-  }
-};
 
 const detailUnivDiverifikasi = async (req, res) => {
   try {
@@ -354,9 +247,12 @@ const detailUnivDiverifikasi = async (req, res) => {
     const universitiesDetail = await Permintaan.findAll({
       where: {
         type: "mahasiswa",
-        statusId: 2,
+        statusId: 1,
         ptId: idUniv,
         prodiId: idProdi,
+        penempatan: {
+          [sequelize.Op.not]: null
+        }
       },
       include: [
         {
@@ -381,7 +277,7 @@ const detailUnivDiverifikasi = async (req, res) => {
         },
         {
           model: UnitKerja,
-          as: "UnitKerjaPenempatan",
+          as: "UnitKerjaPenempatan", 
           attributes: ["name"],
         },
       ],
@@ -390,11 +286,11 @@ const detailUnivDiverifikasi = async (req, res) => {
 
     const formattedUniversities = universitiesDetail.map((item) => ({
       id: item.id,
-      nama_peserta: item.User?.Mahasiswas?.[0]?.name ?? null, // Changed to Mahasiswas
-      nim: item.User?.Mahasiswas?.[0]?.nim ?? null, // Changed to Mahasiswas
+      nama_peserta: item.User?.Mahasiswas?.[0]?.name ?? null,
+      nim: item.User?.Mahasiswas?.[0]?.nim ?? null,
       email: item.User?.email ?? null,
-      no_hp: item.User?.Mahasiswas?.[0]?.no_hp ?? null, // Changed to Mahasiswas
-      alamat: item.User?.Mahasiswas?.[0]?.alamat ?? null, // Changed to Mahasiswas
+      no_hp: item.User?.Mahasiswas?.[0]?.no_hp ?? null,
+      alamat: item.User?.Mahasiswas?.[0]?.alamat ?? null,
       institusi: item.PerguruanTinggi?.name ?? null,
       program_studi: item.Prodi?.name ?? null,
       unit_kerja: item.UnitKerjaPenempatan?.name ?? null,
@@ -421,8 +317,11 @@ const detailSmkDiverifikasi = async (req, res) => {
     const schoolsDetail = await Permintaan.findAll({
       where: {
         type: "siswa",
-        statusId: 2,
+        statusId: 1,
         smkId: idSmk,
+        penempatan: {
+          [sequelize.Op.not]: null
+        }
       },
       include: [
         {
@@ -454,14 +353,13 @@ const detailSmkDiverifikasi = async (req, res) => {
       attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
     });
 
-    // Format vocational students data
     const formattedSchools = schoolsDetail.map((item) => ({
       id: item.id,
-      nama_peserta: item.User?.Siswas?.[0]?.name ?? null, // Changed to Siswas
-      nisn: item.User?.Siswas?.[0]?.nisn ?? null, // Changed to Siswas
+      nama_peserta: item.User?.Siswas?.[0]?.name ?? null,
+      nisn: item.User?.Siswas?.[0]?.nisn ?? null,
       email: item.User?.email ?? null,
-      no_hp: item.User?.Siswas?.[0]?.no_hp ?? null, // Changed to Siswas
-      alamat: item.User?.Siswas?.[0]?.alamat ?? null, // Changed to Siswas
+      no_hp: item.User?.Siswas?.[0]?.no_hp ?? null,
+      alamat: item.User?.Siswas?.[0]?.alamat ?? null,
       institusi: item.Smk?.name ?? null,
       jurusan: item.Jurusan?.name ?? null,
       unit_kerja: item.UnitKerjaPenempatan?.name ?? null,
@@ -562,7 +460,10 @@ const univGenerateLetter = async (req, res) => {
     const universitiesDetail = await Permintaan.findAll({
       where: {
         type: "mahasiswa",
-        statusId: 2,
+        statusId: 1,
+        penempatan: {
+          [sequelize.Op.not]: null
+        },
         ptId: idUniv,
         prodiId: idProdi,
       },
@@ -661,7 +562,10 @@ const smkGenerateLetter = async (req, res) => {
     const smkDetail = await Permintaan.findAll({
       where: {
         type: "siswa",
-        statusId: 2,
+        statusId: 1,
+        penempatan: {
+          [sequelize.Op.not]: null
+        },
         smkId: idSmk,
       },
       include: [
@@ -759,27 +663,19 @@ const smkGenerateLetter = async (req, res) => {
 
 const sendSuratBalasan = async (req, res) => {
   try {
-    const { idPermintaan } = req.params;
-    const { email } = req.body;
-    const fileSuratBalasan = req.files.fileSuratBalasan;
-    
-    const permintaan = await Permintaan.findByPk(idPermintaan, {
-      include: [
-        {
-          model: Users,
-          attributes: ["email"],
-        },
-      ],
-    });
-    
-    if (!permintaan) {
-      return res.status(404).json({
+    // Parse responseArray from form data
+    const responseArray = JSON.parse(req.body.responseArray);
+
+    // Check if responseArray is an array
+    if (!Array.isArray(responseArray)) {
+      return res.status(400).json({
         status: "error",
-        message: "Permintaan magang tidak ditemukan",
+        message: "responseArray harus berupa array"
       });
     }
-    
-    if (!fileSuratBalasan) {
+
+    // Check if file exists in request
+    if (!req.files || !req.files.fileSuratBalasan) {
       return res.status(400).json({
         status: "error",
         message: "File surat balasan harus diunggah"
@@ -787,43 +683,47 @@ const sendSuratBalasan = async (req, res) => {
     }
 
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
+        pass: process.env.EMAIL_PASS
+      }
     });
 
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Surat Balasan Permintaan Magang",
-      text: "Berikut adalah surat balasan permintaan magang Anda.",
-      attachments: [
-        {
-          filename: fileSuratBalasan.name,
-          content: fileSuratBalasan.data
-        },
-      ],
-    };
+    for (const response of responseArray) {
+      const email = response.email;
+      const filePath = req.files.fileSuratBalasan[0].path;
 
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Error sending email:", error);
-        return res.status(500).json({
-          status: "error",
-          message: "Gagal mengirim email",
-          error: error.message,
-        });
-      }
-      return res.status(200).json({
-        status: "success",
-        message: "Email berhasil dikirim",
-        info: info.response,
-      });
+      // Setup email with attachment
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Surat Balasan',
+        text: 'Berikut adalah surat balasan Anda.',
+        attachments: [
+          {
+            filename: req.files.fileSuratBalasan[0].filename,
+            path: filePath
+          }
+        ]
+      };
+
+      // Send email
+      await transporter.sendMail(mailOptions);
+
+      // Save the surat balasan record and update status
+      await Promise.all([
+        SuratBalasan.createSuratBalasan(response.id, filePath),
+        Permintaan.update({ statusId: 2 }, { where: { id: response.id } })
+      ]);
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Surat balasan berhasil dikirim ke semua email",
     });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in sendSuratBalasan:", error);
     return res.status(500).json({
       status: "error",
       message: "Internal server error",
@@ -839,7 +739,6 @@ module.exports = {
   permintaanDiterima,
   detailUnivDiverifikasi,
   detailSmkDiverifikasi,
-  getDetailPermintaanDiterima,
   generateLetter,
   univGenerateLetter,
   smkGenerateLetter,
