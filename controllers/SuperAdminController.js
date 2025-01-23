@@ -484,11 +484,9 @@ const detailSmkDiverifikasi = async (req, res) => {
 const generateLetter = async (data) => {
   try {
     console.log("Generating letter with data:", JSON.stringify(data, null, 2));
-    // Choose template based on data structure - add logging
     const templateFile = data.participants[0]?.nim ? "templateMhs.docx" : "templateSiswa.docx";
     console.log("Using template:", templateFile);
     
-    // Verify template exists
     const templatePath = path.resolve(__dirname, templateFile);
     if (!fs.existsSync(templatePath)) {
       throw new Error(`Template file not found: ${templateFile}`);
@@ -540,7 +538,6 @@ const generateLetter = async (data) => {
     const docxBuf = doc.getZip().generate({ type: "nodebuffer" });
     console.log("DOCX generated successfully");
     
-    // Add PDF conversion logging
     console.log("Converting to PDF...");
     const pdfBuf = await convert(docxBuf, '.pdf', undefined);
     console.log("PDF conversion successful");
@@ -630,10 +627,10 @@ const univGenerateLetter = async (req, res) => {
 
     const data = {
       noSurat: nomorSurat,
+      perihal: perihal,
       pejabat: pejabat,
       institusi: institusi,
       prodi: prodi,
-      perihal: perihal,
       perihal_detail:perihal_detail,
       participants: participants,
     };
