@@ -448,6 +448,7 @@ const getAllPermintaanMagang = async (req, res) => {
       include: [
         {
           model: Status,
+          attributes: ['name']
         },
         {
           model: Users,
@@ -744,7 +745,7 @@ const approveStatusPermintaanMagang = async (req, res) => {
 
     // Update status to approved (assuming status ID 2 is for approved state)
     const updateData = {
-      statusId: 2,
+      statusId: 1
     };
 
     // Add penempatan to update data if provided
@@ -755,7 +756,7 @@ const approveStatusPermintaanMagang = async (req, res) => {
     await permintaanMagang.update(updateData);
 
     res.status(200).json({
-      message: "Status permintaan magang berhasil diperbarui.",
+      message: "Penempatan magang berhasil diperbarui.",
       data: permintaanMagang,
     });
   } catch (error) {
