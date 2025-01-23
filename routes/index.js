@@ -9,6 +9,7 @@ const {
     getPermintaanMagangById,
     getMyPermintaanMagang,
     approveStatusPermintaanMagang,
+    sendSuratPernyataan,
     
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
@@ -47,6 +48,8 @@ router.post('/intern/diterima/smk/:idSmk', smkGenerateLetter)
 router.patch('/intern/:id/reject', approveStatusPermintaanMagang);
 
 router.post('/intern/send-surat-balasan/:idPermintaan', verifyToken, uploadFields, sendSuratBalasan);
+router.post('/intern/send-surat-pernyataan', verifyToken, uploadFields, sendSuratPernyataan);
+
 // // Endpoint untuk menghapus permintaan magang
 // router.delete('intern/:id', deletePermintaanMagang);
 module.exports = router;

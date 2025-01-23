@@ -484,6 +484,7 @@ const detailSmkDiverifikasi = async (req, res) => {
 const generateLetter = async (data) => {
   try {
     console.log("Generating letter with data:", JSON.stringify(data, null, 2));
+
     const templateFile = data.participants[0]?.nim ? "templateMhs.docx" : "templateSiswa.docx";
     console.log("Using template:", templateFile);
     
@@ -559,6 +560,9 @@ const univGenerateLetter = async (req, res) => {
     const { nomorSurat, perihal, pejabat, institusi, prodi, perihal_detail } =
       req.body;
 
+
+      console.log("prodi",prodi)
+      console.log("req body",req.body)
     const universitiesDetail = await Permintaan.findAll({
       where: {
         type: "mahasiswa",
@@ -831,6 +835,8 @@ const sendSuratBalasan = async (req, res) => {
     });
   }
 };
+
+
 
 
 module.exports = {
