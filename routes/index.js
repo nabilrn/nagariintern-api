@@ -9,6 +9,7 @@ const {
     getPermintaanMagangById,
     getMyPermintaanMagang,
     approveStatusPermintaanMagang,
+    sendSuratPernyataan,
     
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
