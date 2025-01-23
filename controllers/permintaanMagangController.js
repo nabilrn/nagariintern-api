@@ -745,7 +745,7 @@ const approveStatusPermintaanMagang = async (req, res) => {
 
     // Update status to approved (assuming status ID 2 is for approved state)
     const updateData = {
-      statusId: 2
+      statusId: 1
     };
 
     // Add penempatan to update data if provided
