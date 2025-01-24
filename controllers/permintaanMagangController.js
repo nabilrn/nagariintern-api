@@ -743,12 +743,8 @@ const approveStatusPermintaanMagang = async (req, res) => {
       }
     }
 
-    // Update status to approved (assuming status ID 2 is for approved state)
-    const updateData = {
-      statusId: 1
-    };
-
-    // Add penempatan to update data if provided
+    // Update penempatan if provided
+    const updateData = {};
     if (penempatan) {
       updateData.penempatan = penempatan;
     }
@@ -788,6 +784,8 @@ const deletePermintaanMagang = async (req, res) => {
     res.status(500).json({ error: "Terjadi kesalahan pada server." });
   }
 };
+
+
 
 module.exports = {
   createPermintaanMagangSiswa,
