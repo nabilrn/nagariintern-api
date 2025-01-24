@@ -13,7 +13,9 @@ const {
   Mahasiswa,
   Siswa,
   Status,
-  SuratBalasan
+  SuratBalasan,
+  Dokumen,
+  TipeDokumen
 } = require("../models/index");
 const sequelize = require("sequelize");
 const libre = require('libreoffice-convert');
@@ -240,7 +242,7 @@ const permintaanDiterima = async (req, res) => {
 
 
 
-const detailUnivDiverifikasi = async (req, res) => {
+const detailUnivDiterima= async (req, res) => {
   try {
     const { idUniv, idProdi } = req.params;
 
@@ -310,7 +312,7 @@ const detailUnivDiverifikasi = async (req, res) => {
   }
 };
 
-const detailSmkDiverifikasi = async (req, res) => {
+const detailSmkDiterima = async (req, res) => {
   try {
     const { idSmk } = req.params;
 
@@ -736,17 +738,314 @@ const sendSuratBalasan = async (req, res) => {
   }
 };
 
+const getDiverifikasi = async (req, res) => {
+  try {
+    const permintaanData = await Permintaan.findAll({
+      where: {
+        statusId: {
+          [sequelize.Op.in]: [2, 3]
+        },
+        penempatan: {
+          [sequelize.Op.not]: null
+        }
+      },
+      include: [
+        {
+          model: Users,
+          include: [
+            {
+              model: Mahasiswa,
+              attributes: ["name", "nim", "no_hp", "alamat"],
+              required: false,
+            },
+            {
+              model: Siswa,
+              attributes: ["name", "nisn", "no_hp", "alamat"],
+              required: false,
+            },
+          ],
+          attributes: ["email"],
+        },
+        {
+          model: PerguruanTinggi,
+          attributes: ["id", "name"],
+        },
+        {
+          model: Prodi,
+          attributes: ["id", "name"],
+        },
+        {
+          model: Smk,
+          attributes: ["id", "name"],
+        },
+        {
+          model: UnitKerja,
+          as: "UnitKerjaPenempatan",
+          attributes: ["id", "name"],
+        },
+        {
+          model: Dokumen,
+          where: {
+            tipeDokumenId: {
+              [sequelize.Op.in]: [6, 7]
+            }
+          },
+          required: false,
+          attributes: ["url"]
+        }
+      ],
+      attributes: ["id", "type", "tanggalMulai", "tanggalSelesai", "createdAt"],
+      distinct: true,
+    });
 
+    const result = {
+      mahasiswa: {
+        institusi: "",
+        prodi: "",
+        totalPeserta: 0,
+        unitKerja: "",
+        dataMhs: []
+      },
+      siswa: {
+        institusi: "",
+        totalPeserta: 0,
+        unitKerja: "",
+        dataSiswa: []
+      }
+    };
+
+    const processedNims = new Set();
+    const processedNisns = new Set();
+
+    permintaanData.forEach(data => {
+      const cleanData = {
+        ...data.dataValues,
+        User: data.User ? {
+          email: data.User.email,
+          Mahasiswas: data.type === 'mahasiswa' ? data.User.Mahasiswas : undefined,
+          Siswas: data.type === 'siswa' ? data.User.Siswas : undefined
+        } : null,
+        Dokumens: data.Dokumens ? data.Dokumens.map(dok => dok.url) : []
+      };
+
+      if (data.type === 'mahasiswa') {
+        const nim = data.User?.Mahasiswas?.[0]?.nim;
+        if (nim && !processedNims.has(nim)) {
+          processedNims.add(nim);
+          result.mahasiswa.institusi = data.PerguruanTinggi?.name || "";
+          result.mahasiswa.prodi = data.Prodi?.name || "";
+          result.mahasiswa.unitKerja = data.UnitKerjaPenempatan?.name || "";
+          result.mahasiswa.totalPeserta++;
+          result.mahasiswa.dataMhs.push({
+            ...cleanData,
+            institusiId: data.PerguruanTinggi?.id,
+            prodiId: data.Prodi?.id,
+            penempatanId: data.UnitKerjaPenempatan?.id
+          });
+        }
+      } else {
+        const nisn = data.User?.Siswas?.[0]?.nisn;
+        if (nisn && !processedNisns.has(nisn)) {
+          processedNisns.add(nisn);
+          result.siswa.institusi = data.Smk?.name || "";
+          result.siswa.unitKerja = data.UnitKerjaPenempatan?.name || "";
+          result.siswa.totalPeserta++;
+          result.siswa.dataSiswa.push({
+            ...cleanData,
+            institusiId: data.Smk?.id,
+            penempatanId: data.UnitKerjaPenempatan?.id
+          });
+        }
+      }
+    });
+
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+const detailUnivDiverifikasi = async (req, res) => {
+  try {
+    const { idUniv, idProdi } = req.params;
+
+    const universitiesDetail = await Permintaan.findAll({
+      where: {
+      type: "mahasiswa",
+      statusId: {
+        [sequelize.Op.in]: [2, 3]
+      },
+      ptId: idUniv,
+      prodiId: idProdi,
+      penempatan: {
+        [sequelize.Op.not]: null
+      }
+      },
+      include: [
+      {
+        model: Users,
+        include: [
+        {
+          model: Mahasiswa,
+          attributes: ["name", "nim", "no_hp", "alamat"],
+          required: false,
+        },
+        ],
+        attributes: ["email"],
+        required: false,
+      },
+      {
+        model: PerguruanTinggi,
+        attributes: ["name"],
+      },
+      {
+        model: Prodi,
+        attributes: ["name"],
+      },
+      {
+        model: UnitKerja,
+        as: "UnitKerjaPenempatan",
+        attributes: ["name"],
+      },
+      {
+        model: Dokumen,
+        where: {
+          tipeDokumenId: {
+            [sequelize.Op.in]: [6, 7]
+          }
+        },
+        required: false,
+        attributes: ["url"]
+      }
+      ],
+      attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
+    });
+
+    const formattedUniversities = universitiesDetail.map((item) => ({
+      id: item.id,
+      nama_peserta: item.User?.Mahasiswas?.[0]?.name ?? null,
+      nim: item.User?.Mahasiswas?.[0]?.nim ?? null,
+      email: item.User?.email ?? null,
+      no_hp: item.User?.Mahasiswas?.[0]?.no_hp ?? null,
+      alamat: item.User?.Mahasiswas?.[0]?.alamat ?? null,
+      institusi: item.PerguruanTinggi?.name ?? null,
+      program_studi: item.Prodi?.name ?? null,
+      unit_kerja: item.UnitKerjaPenempatan?.name ?? null,
+      tanggal_mulai: item.tanggalMulai,
+      tanggal_selesai: item.tanggalSelesai,
+      tanggal_daftar: item.createdAt,
+      dokumen_urls: item.Dokumens.map(dok => dok.url)
+    }));
+
+    return res.status(200).json(formattedUniversities);
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+const detailSmkDiverifikasi = async (req, res) => {
+  try {
+    const { idSmk } = req.params;
+
+    const schoolsDetail = await Permintaan.findAll({
+      where: {
+        type: "siswa",
+        statusId: 2,
+        smkId: idSmk,
+        penempatan: {
+          [sequelize.Op.not]: null
+        }
+      },
+      include: [
+        {
+          model: Users,
+          include: [
+            {
+              model: Siswa,
+              attributes: ["name", "nisn", "no_hp", "alamat"],
+              required: false,
+            },
+          ],
+          attributes: ["email"],
+          required: false,
+        },
+        {
+          model: Smk,
+          attributes: ["name"],
+        },
+        {
+          model: Jurusan,
+          attributes: ["name"],
+        },
+        {
+          model: UnitKerja,
+          as: "UnitKerjaPenempatan",
+          attributes: ["name"],
+        },
+        {
+          model: Dokumen,
+          where: {
+            tipeDokumenId: {
+              [sequelize.Op.in]: [6, 7]
+            }
+          },
+          required: false,
+          attributes: ["url"]
+        }
+      ],
+      attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
+    });
+
+    const formattedSchools = schoolsDetail.map((item) => ({
+      id: item.id,
+      nama_peserta: item.User?.Siswas?.[0]?.name ?? null,
+      nisn: item.User?.Siswas?.[0]?.nisn ?? null,
+      email: item.User?.email ?? null,
+      no_hp: item.User?.Siswas?.[0]?.no_hp ?? null,
+      alamat: item.User?.Siswas?.[0]?.alamat ?? null,
+      institusi: item.Smk?.name ?? null,
+      jurusan: item.Jurusan?.name ?? null,
+      unit_kerja: item.UnitKerjaPenempatan?.name ?? null,
+      tanggal_mulai: item.tanggalMulai,
+      tanggal_selesai: item.tanggalSelesai,
+      tanggal_daftar: item.createdAt,
+      dokumen_urls: item.Dokumens.map(dok => dok.url)
+    }));
+
+    return res.status(200).json(formattedSchools);
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
 
 
 module.exports = {
   getAllUnitKerja,
   editKuotaUnitKerja,
   permintaanDiterima,
-  detailUnivDiverifikasi,
-  detailSmkDiverifikasi,
+  detailUnivDiterima,
+  detailSmkDiterima,
   generateLetter,
   univGenerateLetter,
   smkGenerateLetter,
-  sendSuratBalasan
+  sendSuratBalasan,
+  getDiverifikasi,
+  detailUnivDiverifikasi,
+  detailSmkDiverifikasi,
 };

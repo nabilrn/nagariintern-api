@@ -14,7 +14,7 @@ const {
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
-const { permintaanDiterima,detailUnivDiverifikasi,detailSmkDiverifikasi,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan} = require('../controllers/SuperAdminController');
+const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan, detailUnivDiverifikasi, detailSmkDiverifikasi} = require('../controllers/SuperAdminController');
 
   
 // Basic route
@@ -31,8 +31,11 @@ router.post('/intern/siswa', verifyToken, uploadFields, createPermintaanMagangSi
 router.get('/intern', verifyToken, getAllPermintaanMagang);
 
 router.get('/intern/diterima', verifyToken, permintaanDiterima)
-router.get('/intern/diterima/univ/:idUniv/:idProdi', detailUnivDiverifikasi)
-router.get('/intern/diterima/smk/:idSmk', detailSmkDiverifikasi)
+router.get('/intern/diterima/univ/:idUniv/:idProdi', detailUnivDiterima)
+router.get('/intern/diverifikasi/univ/:idUniv/:idProdi/:unitKerjaId', detailUnivDiverifikasi)
+
+router.get('/intern/diterima/smk/:idSmk', detailSmkDiterima)
+router.get('/intern/diverifikasi/smk/:idSmk/:unitKerjaId', detailSmkDiverifikasi)
 
 router.post('/intern/diterima/univ/:idUniv/:idProdi', univGenerateLetter)
 // router.post('/intern/diterima/smk/:idSmk', detailSmkDiverifikasi)
