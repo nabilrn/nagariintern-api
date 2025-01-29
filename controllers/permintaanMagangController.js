@@ -698,6 +698,8 @@ const sendSuratPernyataan = async (req, res) => {
   }
 };
 
+
+
 const approveStatusPermintaanMagang = async (req, res) => {
   try {
     const { id } = req.params;

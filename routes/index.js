@@ -14,7 +14,7 @@ const {
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
-const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan, detailUnivDiverifikasi, detailSmkDiverifikasi} = require('../controllers/SuperAdminController');
+const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan,sendSuratPengantar, detailUnivDiverifikasi, detailSmkDiverifikasi, generateSuratPengantarMhs, generateSuratPengantarSiswa} = require('../controllers/SuperAdminController');
 
   
 // Basic route
@@ -33,6 +33,8 @@ router.get('/intern', verifyToken, getAllPermintaanMagang);
 router.get('/intern/diterima', verifyToken, permintaanDiterima)
 router.get('/intern/diterima/univ/:idUniv/:idProdi', detailUnivDiterima)
 router.get('/intern/diverifikasi/univ/:idUniv/:idProdi/:unitKerjaId', detailUnivDiverifikasi)
+router.post('/intern/diverifikasi/univ/:idUniv/:idProdi/:unitKerjaId', generateSuratPengantarMhs)
+router.post('/intern/diverifikasi/smk/:idSmk/:unitKerjaId', generateSuratPengantarSiswa)
 
 router.get('/intern/diterima/smk/:idSmk', detailSmkDiterima)
 router.get('/intern/diverifikasi/smk/:idSmk/:unitKerjaId', detailSmkDiverifikasi)
@@ -54,6 +56,7 @@ router.post('/intern/send-surat-pernyataan', verifyToken, uploadFields, sendSura
 
 
 router.post('/intern/send-surat-balasan', verifyToken, uploadFields, sendSuratBalasan);
+router.post('/intern/send-surat-pengantar', verifyToken, uploadFields, sendSuratPengantar);
 
 // // Endpoint untuk menghapus permintaan magang
 // router.delete('intern/:id', deletePermintaanMagang);

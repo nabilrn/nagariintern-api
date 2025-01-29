@@ -27,7 +27,9 @@ const calculateAvailableQuota = async () => {
   const unitKerjas = await UnitKerja.findAll();
   const acceptedRequests = await Permintaan.findAll({
     where: {
-      statusId: 2 
+      statusId: {
+        [sequelize.Op.in]: [2, 3]
+      },
     },
     attributes: [
       'unitKerjaId',
@@ -41,7 +43,7 @@ const calculateAvailableQuota = async () => {
     const mhsCount = acceptedRequests.find(r =>
       r.unitKerjaId === unit.id && r.type === 'mahasiswa'
     )?.get('count') || 0;
-   
+
     const siswaCount = acceptedRequests.find(r =>
       r.unitKerjaId === unit.id && r.type === 'siswa'
     )?.get('count') || 0;
@@ -58,7 +60,7 @@ const getAllUnitKerja = async (req, res) => {
   try {
     const unitKerjaWithQuota = await calculateAvailableQuota();
     return res.status(200).json({
-      unitKerja: unitKerjaWithQuota 
+      unitKerja: unitKerjaWithQuota
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -111,7 +113,7 @@ const editKuotaUnitKerja = async (req, res) => {
 
     // Get updated data with available quota calculations
     const unitKerjaWithQuota = await calculateAvailableQuota();
-    
+
     return res.status(200).json({
       message: "Unit kerja berhasil diperbarui.",
       unitKerja: unitKerjaWithQuota
@@ -232,9 +234,9 @@ const permintaanDiterima = async (req, res) => {
     });
   } catch (error) {
     console.error("Error:", error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       message: "Terjadi kesalahan pada server.",
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -242,7 +244,7 @@ const permintaanDiterima = async (req, res) => {
 
 
 
-const detailUnivDiterima= async (req, res) => {
+const detailUnivDiterima = async (req, res) => {
   try {
     const { idUniv, idProdi } = req.params;
 
@@ -279,7 +281,7 @@ const detailUnivDiterima= async (req, res) => {
         },
         {
           model: UnitKerja,
-          as: "UnitKerjaPenempatan", 
+          as: "UnitKerjaPenempatan",
           attributes: ["name"],
         },
       ],
@@ -385,16 +387,22 @@ const generateLetter = async (data) => {
   try {
     console.log("Generating letter with data:", JSON.stringify(data, null, 2));
 
-    const templateFile = data.participants[0]?.nim ? "templateMhs.docx" : "templateSiswa.docx";
+    // Choose template based on the function being called
+    let templateFile;
+    if (data.jml && data.terbilang) {
+      templateFile = data.type === 'mahasiswa' ? "templatePengantarMhs.docx" : "templatePengantarSiswa.docx";
+    } else {
+      templateFile = data.type === 'mahasiswa' ? "templateMhs.docx" : "templateSiswa.docx";
+    }
     console.log("Using template:", templateFile);
-    
+
     const templatePath = path.resolve(__dirname, templateFile);
     if (!fs.existsSync(templatePath)) {
       throw new Error(`Template file not found: ${templateFile}`);
     }
-    
+
     const content = fs.readFileSync(templatePath, "binary");
-    
+
     const zip = new PizZip(content);
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
@@ -424,7 +432,7 @@ const generateLetter = async (data) => {
 
     const dataWithDates = {
       ...data,
-      jml: data.participants.length,
+      jml: data.jml || data.participants.length,
       tanggal_singkat: formatShortDate(now),
       tanggal_panjang: formatLongDate(now),
       students: data.participants.map((student, index) => ({
@@ -438,11 +446,11 @@ const generateLetter = async (data) => {
 
     const docxBuf = doc.getZip().generate({ type: "nodebuffer" });
     console.log("DOCX generated successfully");
-    
+
     console.log("Converting to PDF...");
     const pdfBuf = await convert(docxBuf, '.pdf', undefined);
     console.log("PDF conversion successful");
-    
+
     return pdfBuf;
   } catch (error) {
     console.error("Detailed error in generateLetter:", {
@@ -461,8 +469,8 @@ const univGenerateLetter = async (req, res) => {
       req.body;
 
 
-      console.log("prodi",prodi)
-      console.log("req body",req.body)
+    console.log("prodi", prodi)
+    console.log("req body", req.body)
     const universitiesDetail = await Permintaan.findAll({
       where: {
         type: "mahasiswa",
@@ -538,7 +546,7 @@ const univGenerateLetter = async (req, res) => {
       pejabat: pejabat,
       institusi: institusi,
       prodi: prodi,
-      perihal_detail:perihal_detail,
+      perihal_detail: perihal_detail,
       participants: participants,
     };
 
@@ -553,7 +561,7 @@ const univGenerateLetter = async (req, res) => {
     console.error("Error:", error);
     return res.status(500).json({
       status: "error",
-      message: "Internal server error", 
+      message: "Internal server error",
       error: error.message
     });
   }
@@ -564,7 +572,7 @@ const smkGenerateLetter = async (req, res) => {
     const { nomorSurat, perihal, pejabat, institusi, perihal_detail } = req.body;
 
     console.log("Fetching SMK details for ID:", idSmk);
-    
+
     const smkDetail = await Permintaan.findAll({
       where: {
         type: "siswa",
@@ -658,14 +666,201 @@ const smkGenerateLetter = async (req, res) => {
       params: req.params,
       body: req.body
     });
-    
+
     return res.status(500).json({
       status: "error",
-      message: "Gagal membuat surat", 
+      message: "Gagal membuat surat",
       error: error.message
     });
   }
 };
+
+const generateSuratPengantarMhs = async (req, res) => {
+  try {
+    const { idUniv, idProdi, unitKerjaId } = req.params;
+    const { nomorSurat, perihal, pejabat, terbilang, institusi, prodi, tmptMagang } = req.body;
+
+    const universitiesDetail = await Permintaan.findAll({
+      where: {
+        type: "mahasiswa",
+        statusId: {
+          [sequelize.Op.in]: [2, 3]
+        },
+        penempatan: unitKerjaId, // Changed this line to use penempatan
+        ptId: idUniv,
+        prodiId: idProdi,
+      },
+      include: [
+        {
+          model: Users,
+          include: [
+            {
+              model: Mahasiswa,
+              attributes: ["name", "nim", "no_hp", "alamat"],
+              required: false,
+            },
+          ],
+          attributes: ["email"],
+          required: false,
+        },
+        {
+          model: PerguruanTinggi,
+          attributes: ["name"],
+        },
+        {
+          model: Prodi,
+          attributes: ["name"],
+        },
+        {
+          model: UnitKerja,
+          as: "UnitKerjaPenempatan",
+          attributes: ["name"],
+        },
+      ],
+      attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
+    });
+
+    const formatPeriod = (startDate, endDate) => {
+      const formatDate = (date) => {
+        const d = new Date(date);
+        const months = [
+          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+      };
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    };
+
+    const participants = universitiesDetail.map((item) => ({
+      nama_mahasiswa: item.User?.Mahasiswas?.[0]?.name || "",
+      nim: item.User?.Mahasiswas?.[0]?.nim || "",
+      penempatan: item.UnitKerjaPenempatan?.name || "",
+      periode: formatPeriod(item.tanggalMulai, item.tanggalSelesai),
+    }));
+
+    const data = {
+      noSurat: nomorSurat,
+      perihal: perihal,
+      pejabat: pejabat,
+      terbilang: terbilang,
+      institusi: institusi,
+      prodi: prodi,
+      tmptMagang: tmptMagang,
+      jml: participants.length,
+      participants: participants,
+      type: 'mahasiswa'  // Add this
+
+
+
+    };
+    console.log("Data:", data);
+    const pdfBuffer = await generateLetter(data);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=surat_pengantar.pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+const generateSuratPengantarSiswa = async (req, res) => {
+  try {
+    const { idSmk, unitKerjaId } = req.params;
+    const { nomorSurat, perihal, pejabat, terbilang, institusi, tmptMagang } = req.body;
+
+    const smkDetail = await Permintaan.findAll({
+      where: {
+        type: "siswa",
+        statusId: {
+          [sequelize.Op.in]: [2, 3]
+        },
+        penempatan: unitKerjaId,
+        smkId: idSmk,
+
+      },
+      include: [
+        {
+          model: Users,
+          include: [
+            {
+              model: Siswa,
+              attributes: ["name", "nisn", "no_hp", "alamat"],
+              required: false,
+            },
+          ],
+          attributes: ["email"],
+          required: false,
+        },
+        {
+          model: Smk,
+          attributes: ["name"],
+        },
+        {
+          model: UnitKerja,
+          as: "UnitKerjaPenempatan",
+          attributes: ["name"],
+        },
+      ],
+      attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
+    });
+
+    const formatPeriod = (startDate, endDate) => {
+      const formatDate = (date) => {
+        const d = new Date(date);
+        const months = [
+          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        ];
+        return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+      };
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    };
+
+    const participants = smkDetail.map((item) => ({
+      nama_siswa: item.User?.Siswas?.[0]?.name || "",
+      nisn: item.User?.Siswas?.[0]?.nisn || "",
+      penempatan: item.UnitKerjaPenempatan?.name || "",
+      periode: formatPeriod(item.tanggalMulai, item.tanggalSelesai),
+    }));
+
+    const data = {
+      noSurat: nomorSurat,
+      perihal: perihal,
+      pejabat: pejabat,
+      terbilang: terbilang,
+      institusi: institusi,
+      tmptMagang: tmptMagang,
+      jml: participants.length,
+      participants: participants,
+      type: 'siswa'  // Add this
+    };
+    console.log("Data:", data);
+    const pdfBuffer = await generateLetter(data);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename=surat_pengantar.pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+
 
 const sendSuratBalasan = async (req, res) => {
   try {
@@ -737,6 +932,81 @@ const sendSuratBalasan = async (req, res) => {
     });
   }
 };
+const sendSuratPengantar = async (req, res) => {
+  try {
+    // Parse responseArray from form data 
+    const responseArray = JSON.parse(req.body.responseArray);
+
+    // Check if responseArray is an array
+    if (!Array.isArray(responseArray)) {
+      return res.status(400).json({
+        status: "error", 
+        message: "responseArray harus berupa array"
+      });
+    }
+
+    // Check if file exists in request
+    if (!req.files || !req.files.SuratPengantar) {
+      return res.status(400).json({
+        status: "error",
+        message: "File surat pengantar harus diunggah"
+      });
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    for (const response of responseArray) {
+      const email = response.email;
+      const filePath = req.files.SuratPengantar[0].path;
+
+      // Setup email with attachment
+      const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: 'Surat Pengantar',
+        text: 'Berikut adalah surat pengantar anda.',
+        attachments: [
+          {
+            filename: req.files.SuratPengantar[0].filename,
+            path: filePath
+          }
+        ]
+      };
+
+      // Send email
+      await transporter.sendMail(mailOptions);
+
+      // Save to Dokumen table instead of SuratBalasan
+      await Promise.all([
+        Dokumen.create({
+          permintaanId: response.id,
+          tipeDokumenId: 6, // Assuming 6 is for surat pengantar
+          url: filePath
+        }),
+        Permintaan.update({ statusId: 2 }, { where: { id: response.id } })
+      ]);
+    }
+
+    res.status(200).json({
+      status: "success",
+      message: "Surat pengantar berhasil dikirim ke semua email",
+    });
+  } catch (error) {
+    console.error("Error in sendSuratPengantar:", error);
+    return res.status(500).json({
+      status: "error", 
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 
 const getDiverifikasi = async (req, res) => {
   try {
@@ -877,52 +1147,52 @@ const detailUnivDiverifikasi = async (req, res) => {
 
     const universitiesDetail = await Permintaan.findAll({
       where: {
-      type: "mahasiswa",
-      statusId: {
-        [sequelize.Op.in]: [2, 3]
-      },
-      ptId: idUniv,
-      prodiId: idProdi,
-      penempatan: {
-        [sequelize.Op.not]: null
-      }
+        type: "mahasiswa",
+        statusId: {
+          [sequelize.Op.in]: [2, 3]
+        },
+        ptId: idUniv,
+        prodiId: idProdi,
+        penempatan: {
+          [sequelize.Op.not]: null
+        }
       },
       include: [
-      {
-        model: Users,
-        include: [
         {
-          model: Mahasiswa,
-          attributes: ["name", "nim", "no_hp", "alamat"],
+          model: Users,
+          include: [
+            {
+              model: Mahasiswa,
+              attributes: ["name", "nim", "no_hp", "alamat"],
+              required: false,
+            },
+          ],
+          attributes: ["email"],
           required: false,
         },
-        ],
-        attributes: ["email"],
-        required: false,
-      },
-      {
-        model: PerguruanTinggi,
-        attributes: ["name"],
-      },
-      {
-        model: Prodi,
-        attributes: ["name"],
-      },
-      {
-        model: UnitKerja,
-        as: "UnitKerjaPenempatan",
-        attributes: ["name"],
-      },
-      {
-        model: Dokumen,
-        where: {
-          tipeDokumenId: {
-            [sequelize.Op.in]: [6, 7]
-          }
+        {
+          model: PerguruanTinggi,
+          attributes: ["name"],
         },
-        required: false,
-        attributes: ["url"]
-      }
+        {
+          model: Prodi,
+          attributes: ["name"],
+        },
+        {
+          model: UnitKerja,
+          as: "UnitKerjaPenempatan",
+          attributes: ["name"],
+        },
+        {
+          model: Dokumen,
+          where: {
+            tipeDokumenId: {
+              [sequelize.Op.in]: [6, 7]
+            }
+          },
+          required: false,
+          attributes: ["url"]
+        }
       ],
       attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
     });
@@ -1048,4 +1318,7 @@ module.exports = {
   getDiverifikasi,
   detailUnivDiverifikasi,
   detailSmkDiverifikasi,
+  generateSuratPengantarMhs,
+  generateSuratPengantarSiswa,
+  sendSuratPengantar
 };
