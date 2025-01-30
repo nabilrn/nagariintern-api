@@ -32,6 +32,7 @@ const uploadFields = upload.fields([
   { name: 'fileTranskrip', maxCount: 1 },
   { name: 'fileKtp', maxCount: 1 },
   { name: 'fileSuratPengantar', maxCount: 1 },
+  { name: 'SuratPengantar', maxCount: 1 },
   { name: 'fileSuratBalasan', maxCount: 1 },
   { name: 'fileSuratPernyataanSiswa', maxCount: 1 },
   { name: 'fileSuratPernyataanWali', maxCount: 1 },

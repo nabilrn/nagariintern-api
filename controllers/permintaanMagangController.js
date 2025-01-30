@@ -696,6 +696,8 @@ const sendSuratPernyataan = async (req, res) => {
   }
 };
 
+
+
 const approveStatusPermintaanMagang = async (req, res) => {
   try {
     const { id } = req.params;
@@ -741,17 +743,6 @@ const approveStatusPermintaanMagang = async (req, res) => {
       }
     }
 
-    // Update status to approved (assuming status ID 2 is for approved state)
-    const updateData = {
-      statusId: 1,
-    };
-
-    // Add penempatan to update data if provided
-    if (penempatan) {
-      updateData.penempatan = penempatan;
-    }
-
-    await permintaanMagang.update(updateData);
 
     res.status(200).json({
       message: "Penempatan magang berhasil diperbarui.",
@@ -786,6 +777,7 @@ const deletePermintaanMagang = async (req, res) => {
     res.status(500).json({ error: "Terjadi kesalahan pada server." });
   }
 };
+
 
 const fs = require("fs");
 
@@ -872,6 +864,7 @@ const downloadSuratBalasan = async (req, res) => {
     }
   }
 };
+
 
 module.exports = {
   createPermintaanMagangSiswa,
