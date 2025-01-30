@@ -12,7 +12,7 @@ const {
   Prodi,
   Mahasiswa,
 } = require("../models/index");
-
+const path = require("path");
 const createPermintaanMagangSiswa = async (req, res) => {
   try {
     const {
@@ -448,7 +448,7 @@ const getAllPermintaanMagang = async (req, res) => {
       include: [
         {
           model: Status,
-          attributes: ['name']
+          attributes: ["name"],
         },
         {
           model: Users,
@@ -652,9 +652,7 @@ const sendSuratPernyataan = async (req, res) => {
 
     await permintaan.update({
       statusId: 3,
-    }
-    );
-
+    });
 
     if (!permintaan) {
       return res.status(404).json({
@@ -745,7 +743,7 @@ const approveStatusPermintaanMagang = async (req, res) => {
 
     // Update status to approved (assuming status ID 2 is for approved state)
     const updateData = {
-      statusId: 1
+      statusId: 1,
     };
 
     // Add penempatan to update data if provided
@@ -789,6 +787,92 @@ const deletePermintaanMagang = async (req, res) => {
   }
 };
 
+const fs = require("fs");
+
+const downloadSuratBalasan = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    const permintaan = await Permintaan.findOne({
+      where: { userId: userId },
+      include: [
+        {
+          model: Dokumen,
+          required: false,
+          include: [
+            {
+              model: TipeDokumen,
+              as: "tipeDokumen",
+              attributes: ["name"],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!permintaan) {
+      return res.status(404).json({
+        message: "Data permintaan tidak ditemukan",
+      });
+    }
+
+    const suratPernyataan = permintaan.Dokumens.find(
+      (doc) => doc.tipeDokumenId === 7
+    );
+
+    if (!suratPernyataan) {
+      return res.status(404).json({
+        message: "Surat pernyataan tidak ditemukan",
+      });
+    }
+
+    const filePath = path.join(
+      __dirname,
+      "..",
+      "public",
+      "uploads",
+      suratPernyataan.url
+    );
+
+    // Check if the file exists
+    if (!fs.existsSync(filePath)) {
+      return res
+        .status(404)
+        .json({ message: "File tidak ditemukan di server" });
+    }
+
+    const mimeType =
+      path.extname(filePath).toLowerCase() === ".pdf"
+        ? "application/pdf"
+        : "application/octet-stream";
+
+    // Send the file
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${path.basename(filePath)}"`
+    );
+    res.setHeader("Content-Type", mimeType);
+
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.on("error", (err) => {
+      console.error("File Stream Error:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ message: "Gagal membaca file" });
+      }v
+    });
+
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error("Error in downloadSuratBalasan:", error.message || error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        message: "Terjadi kesalahan pada server",
+        error: error.message,
+      });
+    }
+  }
+};
+
 module.exports = {
   createPermintaanMagangSiswa,
   createPermintaanMagangMahasiswa,
@@ -798,4 +882,5 @@ module.exports = {
   deletePermintaanMagang,
   getMyPermintaanMagang,
   sendSuratPernyataan,
+  downloadSuratBalasan,
 };

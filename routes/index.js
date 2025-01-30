@@ -10,7 +10,7 @@ const {
     getMyPermintaanMagang,
     approveStatusPermintaanMagang,
     sendSuratPernyataan,
-    
+    downloadSuratBalasan,
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
@@ -51,6 +51,7 @@ router.post('/intern/send-surat-pernyataan', verifyToken, uploadFields, sendSura
 
 
 router.post('/intern/send-surat-balasan', verifyToken, uploadFields, sendSuratBalasan);
+router.get('/download-surat-balasan',verifyToken, downloadSuratBalasan);
 
 // // Endpoint untuk menghapus permintaan magang
 // router.delete('intern/:id', deletePermintaanMagang);
