@@ -28,7 +28,7 @@ const calculateAvailableQuota = async () => {
   const acceptedRequests = await Permintaan.findAll({
     where: {
       statusId: {
-        [sequelize.Op.in]: [2, 3]
+        [sequelize.Op.in]: [2, 3, 4]
       },
     },
     attributes: [
@@ -979,17 +979,15 @@ const sendSuratPengantar = async (req, res) => {
         ]
       };
 
-      // Send email
       await transporter.sendMail(mailOptions);
 
-      // Save to Dokumen table instead of SuratBalasan
       await Promise.all([
         Dokumen.create({
           permintaanId: response.id,
-          tipeDokumenId: 6, // Assuming 6 is for surat pengantar
+          tipeDokumenId: 10,
           url: filePath
         }),
-        Permintaan.update({ statusId: 2 }, { where: { id: response.id } })
+        Permintaan.update({ statusId: 4 }, { where: { id: response.id } })
       ]);
     }
 
@@ -1231,7 +1229,9 @@ const detailSmkDiverifikasi = async (req, res) => {
     const schoolsDetail = await Permintaan.findAll({
       where: {
         type: "siswa",
-        statusId: 2,
+        statusId: {
+          [sequelize.Op.in]: [2, 3]
+        },
         smkId: idSmk,
         penempatan: {
           [sequelize.Op.not]: null
@@ -1305,6 +1305,81 @@ const detailSmkDiverifikasi = async (req, res) => {
 };
 
 
+const estimateCost = async (req, res) => {
+  try {
+    const workingDayRate = 19000; // Cost per working day
+    
+    const participants = await Permintaan.findAll({
+      where: {
+        statusId: 4
+      },
+      attributes: ['id', 'tanggalMulai', 'tanggalSelesai'],
+      include: [
+        {
+          model: Users,
+          include: [
+            {
+              model: Mahasiswa,
+              attributes: ['name'],
+              required: false
+            },
+            {
+              model: Siswa, 
+              attributes: ['name'],
+              required: false
+            }
+          ]
+        }
+      ]
+    });
+
+    const estimations = participants.map(participant => {
+      const startDate = new Date(participant.tanggalMulai);
+      const endDate = new Date(participant.tanggalSelesai);
+      
+      // Calculate total days
+      const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      
+      // Calculate working days (Mon-Fri only)
+      let workingDays = 0;
+      let currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        // 0 is Sunday, 6 is Saturday
+        if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
+          workingDays++;
+        }
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Calculate total cost (only for working days)
+      const totalCost = workingDays * workingDayRate;
+
+      return {
+        id: participant.id,
+        name: participant.User?.Mahasiswas?.[0]?.name || participant.User?.Siswas?.[0]?.name,
+        startDate: participant.tanggalMulai,
+        endDate: participant.tanggalSelesai,
+        totalDays,
+        workingDays,
+        totalCost
+      };
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      data: estimations
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllUnitKerja,
   editKuotaUnitKerja,
@@ -1320,5 +1395,6 @@ module.exports = {
   detailSmkDiverifikasi,
   generateSuratPengantarMhs,
   generateSuratPengantarSiswa,
-  sendSuratPengantar
+  sendSuratPengantar,
+  estimateCost
 };
