@@ -27,7 +27,7 @@ module.exports = (sequelize, DataTypes) => {
       Permintaan.belongsTo(models.Status, { foreignKey: 'statusId' });
       Permintaan.hasMany(models.Kehadiran, { foreignKey: 'permintaanId' });
       Permintaan.hasMany(models.Dokumen, { foreignKey: 'permintaanId' });
-      Permintaan.hasMany(models.SuratBalasan, { foreignKey: 'permintaanId' }); 
+      Permintaan.belongsTo(models.Jadwal, { foreignKey: 'jadwalId' });
     }
   }
   Permintaan.init({
@@ -105,6 +105,18 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       references: {
         model: 'UnitKerja',
+        key: 'id'
+      }
+    },
+    keterangan : {
+      type : DataTypes.TEXT,
+      allowNull: true,
+    },
+    jadwalId : {
+      type : DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'Jadwal',
         key: 'id'
       }
     },

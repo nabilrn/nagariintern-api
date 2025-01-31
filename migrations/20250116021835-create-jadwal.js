@@ -1,25 +1,28 @@
 'use strict';
+
+const { all } = require('axios');
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('surat_balasan', {
+    await queryInterface.createTable('jadwal', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      permintaanId: {
-        type: Sequelize.INTEGER,
+      nama: {
         allowNull: false,
-        references: {
-          model: 'permintaan',
-          key: 'id'
-        }
+        type: Sequelize.STRING
       },
-      nomorSurat: {
-        type: Sequelize.STRING,
-        allowNull: false
+      tanggalMulai: {
+        allowNull: false,
+        type: Sequelize.DATE
+      },
+      tanggalSelesai: {
+        allowNull: false,
+        type: Sequelize.DATE
       },
       createdAt: {
         allowNull: false,
@@ -32,6 +35,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('surat_balasan');
+    await queryInterface.dropTable('jadwal');
   }
 };

@@ -15,19 +15,15 @@ module.exports = {
         references: {
           model: 'permintaan',
           key: 'id'
-        }
-      },
-      bulan: {
-        type: Sequelize.STRING,
-        allowNull: true
+        },
+        onDelete: 'CASCADE'
       },
       totalKehadiran: {
         type: Sequelize.INTEGER,
         allowNull: true
       },
-      biaya: {
+      total_biaya: {
         type: Sequelize.INTEGER,
-        defaultValue: 19000,
         allowNull: true
       },
       createdAt: {

@@ -22,16 +22,13 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
-    bulan: {
-      type : DataTypes.STRING,
-      allowNull: true,
-    },
+    
     totalKehadiran: {
       type : DataTypes.INTEGER,
       allowNull: true,
     },
-    biaya: {
-      type : DataTypes.INTEGER, defaultValue: 19000,
+    total_biaya: {
+      type : DataTypes.INTEGER,
       allowNull: true,
 
     },
