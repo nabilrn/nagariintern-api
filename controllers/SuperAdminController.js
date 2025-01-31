@@ -387,6 +387,7 @@ const generateLetter = async (data) => {
   try {
     console.log("Generating letter with data:", JSON.stringify(data, null, 2));
 
+    console.log(data,">>>>>>>>>>>>")
     // Choose template based on the function being called
     let templateFile;
     if (data.jml && data.terbilang) {
@@ -548,6 +549,7 @@ const univGenerateLetter = async (req, res) => {
       prodi: prodi,
       perihal_detail: perihal_detail,
       participants: participants,
+      type: 'mahasiswa'  // Add this
     };
 
     const pdfBuffer = await generateLetter(data);
@@ -648,6 +650,7 @@ const smkGenerateLetter = async (req, res) => {
       institusi: institusi,
       perihal_detail: perihal_detail,
       participants: participants,
+      type: 'siswa'  // Add this
     };
 
     console.log("Generating letter with data:", JSON.stringify(data, null, 2));

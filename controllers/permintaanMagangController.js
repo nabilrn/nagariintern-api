@@ -697,7 +697,6 @@ const sendSuratPernyataan = async (req, res) => {
 };
 
 
-
 const approveStatusPermintaanMagang = async (req, res) => {
   try {
     const { id } = req.params;
@@ -743,6 +742,13 @@ const approveStatusPermintaanMagang = async (req, res) => {
       }
     }
 
+    // Update penempatan if provided
+    const updateData = {};
+    if (penempatan) {
+      updateData.penempatan = penempatan;
+    }
+
+    await permintaanMagang.update(updateData);
 
     res.status(200).json({
       message: "Penempatan magang berhasil diperbarui.",
