@@ -366,6 +366,7 @@ const detailSmkDiterima = async (req, res) => {
 const generateLetter = async (data) => {
   try {
     console.log("Generating letter with data:", JSON.stringify(data, null, 2));
+
     let templateFile;
     if (data.jml && data.terbilang) {
       templateFile = data.type === 'mahasiswa' ? "templatePengantarMhs.docx" : "templatePengantarSiswa.docx";
@@ -509,7 +510,8 @@ const univGenerateLetter = async (req, res) => {
       prodi: prodi,
       perihal_detail: perihal_detail,
       participants: participants,
-      type: 'mahasiswa'
+      type: 'mahasiswa'  
+
     };
     const pdfBuffer = await generateLetter(data);
     res.setHeader('Content-Type', 'application/pdf');
