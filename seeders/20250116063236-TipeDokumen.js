@@ -11,8 +11,9 @@ module.exports = {
       { name: 'Surat Balasan', createdAt: new Date(), updatedAt: new Date() },
       { name: 'Surat Keterangan Kampus', createdAt: new Date(), updatedAt: new Date() },
       { name: 'Surat Keterangan Pribadi', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'Surat Pengantar Divisi', createdAt: new Date(), updatedAt: new Date() },
       { name: 'Sertifikat', createdAt: new Date(), updatedAt: new Date() },
-      { name: 'Rapor', createdAt: new Date(), updatedAt: new Date() },
+      { name: 'Buku Tabungan', createdAt: new Date(), updatedAt: new Date() },
 
     ], {});
   },

@@ -53,10 +53,6 @@ module.exports = {
           key: 'id'
         }
       },
-      tanggalPengajuan: {
-        type: Sequelize.DATE,
-        allowNull: false
-      },
       tanggalMulai: {
         type: Sequelize.DATE,
         allowNull: false
@@ -81,13 +77,35 @@ module.exports = {
           key: 'id'
         }
       },
+      penempatan: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'unit_kerja',
+          key: 'id'
+        }
+      },
+      keterangan: {
+        type: Sequelize.TEXT,
+        allowNull: true
+      },
+      jadwalId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'jadwal',
+          key: 'id'
+        }
+      },
       createdAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updatedAt: {
         allowNull: false,
-        type: Sequelize.DATE
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
   },

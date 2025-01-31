@@ -12,10 +12,7 @@ const {
   Users,
   Mahasiswa,
   Siswa,
-  Status,
-  SuratBalasan,
   Dokumen,
-  TipeDokumen
 } = require("../models/index");
 const sequelize = require("sequelize");
 const libre = require('libreoffice-convert');
@@ -78,14 +75,12 @@ const editKuotaUnitKerja = async (req, res) => {
       return res.status(404).json({ error: "Unit kerja tidak ditemukan." });
     }
 
-    // Validate tipe_cabang
     if (
       !["pusat", "utama", "a", "b", "c"].includes(tipe_cabang.toLowerCase())
     ) {
       return res.status(400).json({ error: "Tipe cabang tidak valid." });
     }
 
-    // Get default kuota based on tipe_cabang
     let kuota;
     switch (tipe_cabang.toLowerCase()) {
       case "pusat":
@@ -105,13 +100,11 @@ const editKuotaUnitKerja = async (req, res) => {
         break;
     }
 
-    // Update unit kerja with default kuota
     unitKerja.kuotaMhs = kuota.kuotaMhs;
     unitKerja.kuotaSiswa = kuota.kuotaSiswa;
     unitKerja.tipe_cabang = tipe_cabang;
     await unitKerja.save();
 
-    // Get updated data with available quota calculations
     const unitKerjaWithQuota = await calculateAvailableQuota();
 
     return res.status(200).json({
@@ -126,7 +119,6 @@ const editKuotaUnitKerja = async (req, res) => {
 
 const permintaanDiterima = async (req, res) => {
   try {
-    // Get universities data with count of accepted requests per prodi
     const universitiesData = await PerguruanTinggi.findAll({
       include: [
         {
@@ -167,7 +159,6 @@ const permintaanDiterima = async (req, res) => {
       raw: true,
     });
 
-    // Get vocational schools data with count of accepted requests
     const schoolsData = await Smk.findAll({
       include: [
         {
@@ -195,14 +186,12 @@ const permintaanDiterima = async (req, res) => {
       raw: true,
     });
 
-    // Add error handling for empty results
     if (!universitiesData.length && !schoolsData.length) {
       return res.status(404).json({
         message: "Data tidak ditemukan"
       });
     }
 
-    // Restructure universities data to group by university
     const formattedUniversitiesData = universitiesData.reduce((acc, curr) => {
       const existingUniv = acc.find(
         (univ) => univ.nama_institusi === curr.name
@@ -241,13 +230,9 @@ const permintaanDiterima = async (req, res) => {
   }
 };
 
-
-
-
 const detailUnivDiterima = async (req, res) => {
   try {
     const { idUniv, idProdi } = req.params;
-
     const universitiesDetail = await Permintaan.findAll({
       where: {
         type: "mahasiswa",
@@ -287,7 +272,6 @@ const detailUnivDiterima = async (req, res) => {
       ],
       attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
     });
-
     const formattedUniversities = universitiesDetail.map((item) => ({
       id: item.id,
       nama_peserta: item.User?.Mahasiswas?.[0]?.name ?? null,
@@ -302,7 +286,6 @@ const detailUnivDiterima = async (req, res) => {
       tanggal_selesai: item.tanggalSelesai,
       tanggal_daftar: item.createdAt,
     }));
-
     return res.status(200).json(formattedUniversities);
   } catch (error) {
     console.error("Error:", error);
@@ -317,7 +300,6 @@ const detailUnivDiterima = async (req, res) => {
 const detailSmkDiterima = async (req, res) => {
   try {
     const { idSmk } = req.params;
-
     const schoolsDetail = await Permintaan.findAll({
       where: {
         type: "siswa",
@@ -356,7 +338,6 @@ const detailSmkDiterima = async (req, res) => {
       ],
       attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
     });
-
     const formattedSchools = schoolsDetail.map((item) => ({
       id: item.id,
       nama_peserta: item.User?.Siswas?.[0]?.name ?? null,
@@ -371,7 +352,6 @@ const detailSmkDiterima = async (req, res) => {
       tanggal_selesai: item.tanggalSelesai,
       tanggal_daftar: item.createdAt,
     }));
-
     return res.status(200).json(formattedSchools);
   } catch (error) {
     console.error("Error:", error);
@@ -386,8 +366,6 @@ const detailSmkDiterima = async (req, res) => {
 const generateLetter = async (data) => {
   try {
     console.log("Generating letter with data:", JSON.stringify(data, null, 2));
-
-    // Choose template based on the function being called
     let templateFile;
     if (data.jml && data.terbilang) {
       templateFile = data.type === 'mahasiswa' ? "templatePengantarMhs.docx" : "templatePengantarSiswa.docx";
@@ -395,32 +373,25 @@ const generateLetter = async (data) => {
       templateFile = data.type === 'mahasiswa' ? "templateMhs.docx" : "templateSiswa.docx";
     }
     console.log("Using template:", templateFile);
-
     const templatePath = path.resolve(__dirname, templateFile);
     if (!fs.existsSync(templatePath)) {
       throw new Error(`Template file not found: ${templateFile}`);
     }
-
     const content = fs.readFileSync(templatePath, "binary");
-
     const zip = new PizZip(content);
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
       linebreaks: true,
     });
-
-    // Add template data validation
     if (!data.participants || data.participants.length === 0) {
       throw new Error("No participants data provided");
     }
-
     const now = new Date();
     const formatShortDate = (date) => {
       const month = date.getMonth() + 1;
       const year = date.getFullYear();
       return `${month.toString().padStart(2, "0")}-${year}`;
     };
-
     const formatLongDate = (date) => {
       const day = date.getDate();
       const months = [
@@ -429,7 +400,6 @@ const generateLetter = async (data) => {
       ];
       return `${day} ${months[date.getMonth()]} ${date.getFullYear()}`;
     };
-
     const dataWithDates = {
       ...data,
       jml: data.jml || data.participants.length,
@@ -440,17 +410,13 @@ const generateLetter = async (data) => {
         ...student,
       })),
     };
-
     console.log("Rendering template with data:", JSON.stringify(dataWithDates, null, 2));
     doc.render(dataWithDates);
-
     const docxBuf = doc.getZip().generate({ type: "nodebuffer" });
     console.log("DOCX generated successfully");
-
     console.log("Converting to PDF...");
     const pdfBuf = await convert(docxBuf, '.pdf', undefined);
     console.log("PDF conversion successful");
-
     return pdfBuf;
   } catch (error) {
     console.error("Detailed error in generateLetter:", {
@@ -467,8 +433,6 @@ const univGenerateLetter = async (req, res) => {
     const { idUniv, idProdi } = req.params;
     const { nomorSurat, perihal, pejabat, institusi, prodi, perihal_detail } =
       req.body;
-
-
     console.log("prodi", prodi)
     console.log("req body", req.body)
     const universitiesDetail = await Permintaan.findAll({
@@ -510,7 +474,6 @@ const univGenerateLetter = async (req, res) => {
       ],
       attributes: ["id", "tanggalMulai", "tanggalSelesai", "createdAt"],
     });
-
     const formatPeriod = (startDate, endDate) => {
       const formatDate = (date) => {
         const d = new Date(date);
@@ -532,14 +495,12 @@ const univGenerateLetter = async (req, res) => {
       };
       return `${formatDate(startDate)} - ${formatDate(endDate)}`;
     };
-
     const participants = universitiesDetail.map((item) => ({
       nama_mahasiswa: item.User?.Mahasiswas?.[0]?.name || "",
       nim: item.User?.Mahasiswas?.[0]?.nim || "",
       penempatan: item.UnitKerjaPenempatan?.name || "",
       periode: formatPeriod(item.tanggalMulai, item.tanggalSelesai),
     }));
-
     const data = {
       noSurat: nomorSurat,
       perihal: perihal,
@@ -548,15 +509,13 @@ const univGenerateLetter = async (req, res) => {
       prodi: prodi,
       perihal_detail: perihal_detail,
       participants: participants,
+      type: 'mahasiswa'
     };
-
     const pdfBuffer = await generateLetter(data);
-
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'attachment; filename=surat_magang.pdf');
     res.setHeader('Content-Length', pdfBuffer.length);
     res.send(pdfBuffer);
-
   } catch (error) {
     console.error("Error:", error);
     return res.status(500).json({
@@ -648,6 +607,7 @@ const smkGenerateLetter = async (req, res) => {
       institusi: institusi,
       perihal_detail: perihal_detail,
       participants: participants,
+      type: 'siswa'  // Add this
     };
 
     console.log("Generating letter with data:", JSON.stringify(data, null, 2));
@@ -864,10 +824,8 @@ const generateSuratPengantarSiswa = async (req, res) => {
 
 const sendSuratBalasan = async (req, res) => {
   try {
-    // Parse responseArray from form data
     const responseArray = JSON.parse(req.body.responseArray);
 
-    // Check if responseArray is an array
     if (!Array.isArray(responseArray)) {
       return res.status(400).json({
         status: "error",
@@ -875,7 +833,6 @@ const sendSuratBalasan = async (req, res) => {
       });
     }
 
-    // Check if file exists in request
     if (!req.files || !req.files.fileSuratBalasan) {
       return res.status(400).json({
         status: "error",
@@ -895,7 +852,6 @@ const sendSuratBalasan = async (req, res) => {
       const email = response.email;
       const filePath = req.files.fileSuratBalasan[0].path;
 
-      // Setup email with attachment
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
@@ -909,12 +865,14 @@ const sendSuratBalasan = async (req, res) => {
         ]
       };
 
-      // Send email
       await transporter.sendMail(mailOptions);
 
-      // Save the surat balasan record and update status
       await Promise.all([
-        SuratBalasan.createSuratBalasan(response.id, filePath),
+        Dokumen.create({
+          permintaanId: response.id,
+          tipeDokumenId: 5, // Assuming 11 is the ID for Surat Balasan
+          url: filePath
+        }),
         Permintaan.update({ statusId: 2 }, { where: { id: response.id } })
       ]);
     }
@@ -932,6 +890,7 @@ const sendSuratBalasan = async (req, res) => {
     });
   }
 };
+
 const sendSuratPengantar = async (req, res) => {
   try {
     // Parse responseArray from form data 
@@ -940,7 +899,7 @@ const sendSuratPengantar = async (req, res) => {
     // Check if responseArray is an array
     if (!Array.isArray(responseArray)) {
       return res.status(400).json({
-        status: "error", 
+        status: "error",
         message: "responseArray harus berupa array"
       });
     }
@@ -998,7 +957,7 @@ const sendSuratPengantar = async (req, res) => {
   } catch (error) {
     console.error("Error in sendSuratPengantar:", error);
     return res.status(500).json({
-      status: "error", 
+      status: "error",
       message: "Internal server error",
       error: error.message,
     });
@@ -1308,7 +1267,7 @@ const detailSmkDiverifikasi = async (req, res) => {
 const estimateCost = async (req, res) => {
   try {
     const workingDayRate = 19000; // Cost per working day
-    
+
     const participants = await Permintaan.findAll({
       where: {
         statusId: 4
@@ -1324,7 +1283,7 @@ const estimateCost = async (req, res) => {
               required: false
             },
             {
-              model: Siswa, 
+              model: Siswa,
               attributes: ['name'],
               required: false
             }
@@ -1336,10 +1295,10 @@ const estimateCost = async (req, res) => {
     const estimations = participants.map(participant => {
       const startDate = new Date(participant.tanggalMulai);
       const endDate = new Date(participant.tanggalSelesai);
-      
+
       // Calculate total days
       const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-      
+
       // Calculate working days (Mon-Fri only)
       let workingDays = 0;
       let currentDate = new Date(startDate);

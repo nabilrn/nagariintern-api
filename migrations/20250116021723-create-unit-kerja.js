@@ -21,6 +21,10 @@ module.exports = {
         type: Sequelize.INTEGER,
         allowNull: true
       },
+      tipe_cabang: {
+        type: Sequelize.ENUM('pusat', 'utama', 'a', 'b', 'c'),
+        allowNull: true
+      },
       createdAt: {
         allowNull: false,
         type: Sequelize.DATE

@@ -19,6 +19,7 @@ module.exports = (sequelize, DataTypes) => {
         as: 'PermintaanPenempatan'  // Alias untuk permintaan sebagai unit kerja penempatan
       });
       UnitKerja.hasMany(models.Anggaran, { foreignKey: 'unitKerjaId' });
+      UnitKerja.hasMany(models.Karyawan, { foreignKey: 'unitKerjaId' });
     }
   }
   UnitKerja.init({
