@@ -696,6 +696,69 @@ const sendSuratPernyataan = async (req, res) => {
   }
 };
 
+const rejectedStatusPermintaanMagang = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { keterangan } = req.body;
+
+    const permintaanMagang = await Permintaan.findByPk(id);
+
+    if (!permintaanMagang) {
+      return res
+        .status(404)
+        .json({ error: "Permintaan magang tidak ditemukan." });
+    }
+
+    await permintaanMagang.update({
+      statusId: 5,
+      keterangan: keterangan,
+    });
+
+    res.status(200).json({
+      message: "Permintaan magang berhasil ditolak.",
+      data: permintaanMagang,
+    });
+  } catch (error) {
+    console.error(
+      "Error in rejectStatusPermintaanMagang:",
+      error.message || error
+    );
+    res.status(500).json({ error: "Terjadi kesalahan pada server." });
+  }
+};
+
+const rejectStatusPermintaanMagang = async (req, res) => {
+  try {
+    const userId = req.userId;
+        
+
+    const permintaanMagang = await Permintaan.findOne({
+      where: { userId: userId },
+    });
+
+
+    if (!permintaanMagang) {
+      return res
+        .status(404)
+        .json({ error: "Permintaan magang tidak ditemukan." });
+    }
+
+    await permintaanMagang.update({
+      statusId: 2,
+    });
+
+    res.status(200).json({
+      message: "Permintaan magang berhasil ditolak.",
+      data: permintaanMagang,
+    });
+  } catch (error) {
+    console.error(
+      "Error in rejectStatusPermintaanMagang:",
+      error.message || error
+    );
+    res.status(500).json({ error: "Terjadi kesalahan pada server." });
+  }
+};
 
 const approveStatusPermintaanMagang = async (req, res) => {
   try {
@@ -784,7 +847,6 @@ const deletePermintaanMagang = async (req, res) => {
   }
 };
 
-
 const fs = require("fs");
 
 const downloadSuratBalasan = async (req, res) => {
@@ -856,7 +918,8 @@ const downloadSuratBalasan = async (req, res) => {
       console.error("File Stream Error:", err);
       if (!res.headersSent) {
         res.status(500).json({ message: "Gagal membaca file" });
-      }v
+      }
+      v;
     });
 
     fileStream.pipe(res);
@@ -871,13 +934,14 @@ const downloadSuratBalasan = async (req, res) => {
   }
 };
 
-
 module.exports = {
   createPermintaanMagangSiswa,
   createPermintaanMagangMahasiswa,
   getAllPermintaanMagang,
   getPermintaanMagangById,
   approveStatusPermintaanMagang,
+  rejectedStatusPermintaanMagang,
+  rejectStatusPermintaanMagang,
   deletePermintaanMagang,
   getMyPermintaanMagang,
   sendSuratPernyataan,
