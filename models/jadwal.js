@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       Jadwal.hasMany(models.Permintaan, { foreignKey: 'jadwalId' });
-      
+
     }
   }
   Jadwal.init({
@@ -23,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull:false
     },
-    tanggalSelesai: {
+    tanggalTutup: {
       type: DataTypes.DATE,
       allowNull:false
     },

@@ -13,6 +13,7 @@ const {
   Mahasiswa,
   Siswa,
   Dokumen,
+  Jadwal
 } = require("../models/index");
 const sequelize = require("sequelize");
 const libre = require('libreoffice-convert');
@@ -67,46 +68,55 @@ const getAllUnitKerja = async (req, res) => {
 const editKuotaUnitKerja = async (req, res) => {
   try {
     const { id } = req.params;
-    const { tipe_cabang } = req.body;
-
+    const { tipe_cabang, kuotaMhs, kuotaSiswa, isCustomQuota } = req.body;
+    
     const unitKerja = await UnitKerja.findByPk(id);
-
     if (!unitKerja) {
       return res.status(404).json({ error: "Unit kerja tidak ditemukan." });
     }
 
-    if (
-      !["pusat", "utama", "a", "b", "c"].includes(tipe_cabang.toLowerCase())
-    ) {
-      return res.status(400).json({ error: "Tipe cabang tidak valid." });
-    }
+    let kuota = { kuotaMhs, kuotaSiswa };
 
-    let kuota;
-    switch (tipe_cabang.toLowerCase()) {
-      case "pusat":
-        kuota = { kuotaMhs: 16, kuotaSiswa: 0 };
-        break;
-      case "utama":
-        kuota = { kuotaMhs: 25, kuotaSiswa: 0 };
-        break;
-      case "a":
-        kuota = { kuotaMhs: 10, kuotaSiswa: 8 };
-        break;
-      case "b":
-        kuota = { kuotaMhs: 8, kuotaSiswa: 3 };
-        break;
-      case "c":
-        kuota = { kuotaMhs: 5, kuotaSiswa: 2 };
-        break;
+    // If not using custom quota, apply preset values based on branch type
+    if (!isCustomQuota && tipe_cabang) {
+      if (!["pusat", "utama", "a", "b", "c", ""].includes(tipe_cabang.toLowerCase())) {
+        return res.status(400).json({ error: "Tipe cabang tidak valid." });
+      }
+
+      switch (tipe_cabang.toLowerCase()) {
+        case "pusat":
+          kuota = { kuotaMhs: 0, kuotaSiswa: 16 };
+          break;
+        case "utama":
+          kuota = { kuotaMhs: 0, kuotaSiswa: 25 };
+          break;
+        case "a":
+          kuota = { kuotaMhs: 8, kuotaSiswa: 10 };
+          break;
+        case "b":
+          kuota = { kuotaMhs: 3, kuotaSiswa: 8 };
+          break;
+        case "c":
+          kuota = { kuotaMhs: 2, kuotaSiswa: 5 };
+          break;
+      }
+      unitKerja.tipe_cabang = tipe_cabang;
+    } 
+    // If using custom quota, validate the input values
+    else if (isCustomQuota) {
+      if (kuotaMhs === undefined || kuotaSiswa === undefined) {
+        return res.status(400).json({ error: "Kuota mahasiswa dan siswa harus diisi." });
+      }
+      if (kuotaMhs < 0 || kuotaSiswa < 0) {
+        return res.status(400).json({ error: "Kuota tidak boleh bernilai negatif." });
+      }
     }
 
     unitKerja.kuotaMhs = kuota.kuotaMhs;
     unitKerja.kuotaSiswa = kuota.kuotaSiswa;
-    unitKerja.tipe_cabang = tipe_cabang;
     await unitKerja.save();
 
     const unitKerjaWithQuota = await calculateAvailableQuota();
-
     return res.status(200).json({
       message: "Unit kerja berhasil diperbarui.",
       unitKerja: unitKerjaWithQuota
@@ -822,8 +832,6 @@ const generateSuratPengantarSiswa = async (req, res) => {
   }
 };
 
-
-
 const sendSuratBalasan = async (req, res) => {
   try {
     const responseArray = JSON.parse(req.body.responseArray);
@@ -858,7 +866,16 @@ const sendSuratBalasan = async (req, res) => {
         from: process.env.EMAIL_USER,
         to: email,
         subject: 'Surat Balasan',
-        text: 'Berikut adalah surat balasan Anda.',
+        html: `
+          <div style="font-family: Arial, sans-serif; color: #333;">
+            <h2 style="color: #4CAF50;">Surat Balasan</h2>
+            <p>Dear Recipient,</p>
+            <p>Berikut adalah surat balasan yang Anda minta. Silakan lihat lampiran untuk detail lebih lanjut.</p>
+            <p>Terima kasih,</p>
+            <p><strong>Tim Kami</strong></p>
+            <p style="font-size: 12px; color: #777;">Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
+          </div>
+        `,
         attachments: [
           {
             filename: req.files.fileSuratBalasan[0].filename,
@@ -872,7 +889,7 @@ const sendSuratBalasan = async (req, res) => {
       await Promise.all([
         Dokumen.create({
           permintaanId: response.id,
-          tipeDokumenId: 5, // Assuming 11 is the ID for Surat Balasan
+          tipeDokumenId: 5, // Assuming 5 is the ID for Surat Balasan
           url: filePath
         }),
         Permintaan.update({ statusId: 2 }, { where: { id: response.id } })
@@ -895,25 +912,19 @@ const sendSuratBalasan = async (req, res) => {
 
 const sendSuratPengantar = async (req, res) => {
   try {
-    // Parse responseArray from form data 
     const responseArray = JSON.parse(req.body.responseArray);
-
-    // Check if responseArray is an array
     if (!Array.isArray(responseArray)) {
       return res.status(400).json({
         status: "error",
         message: "responseArray harus berupa array"
       });
     }
-
-    // Check if file exists in request
     if (!req.files || !req.files.SuratPengantar) {
       return res.status(400).json({
         status: "error",
         message: "File surat pengantar harus diunggah"
       });
     }
-
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -921,12 +932,9 @@ const sendSuratPengantar = async (req, res) => {
         pass: process.env.EMAIL_PASS
       }
     });
-
     for (const response of responseArray) {
       const email = response.email;
       const filePath = req.files.SuratPengantar[0].path;
-
-      // Setup email with attachment
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
@@ -939,9 +947,7 @@ const sendSuratPengantar = async (req, res) => {
           }
         ]
       };
-
       await transporter.sendMail(mailOptions);
-
       await Promise.all([
         Dokumen.create({
           permintaanId: response.id,
@@ -951,7 +957,6 @@ const sendSuratPengantar = async (req, res) => {
         Permintaan.update({ statusId: 4 }, { where: { id: response.id } })
       ]);
     }
-
     res.status(200).json({
       status: "success",
       message: "Surat pengantar berhasil dikirim ke semua email",
@@ -965,7 +970,6 @@ const sendSuratPengantar = async (req, res) => {
     });
   }
 };
-
 
 const getDiverifikasi = async (req, res) => {
   try {
@@ -1265,7 +1269,6 @@ const detailSmkDiverifikasi = async (req, res) => {
   }
 };
 
-
 const estimateCost = async (req, res) => {
   try {
     const workingDayRate = 19000; // Cost per working day
@@ -1341,7 +1344,29 @@ const estimateCost = async (req, res) => {
   }
 };
 
+const createJadwalPendaftaran = async (req, res) => {
+  try {
+    const {nama, tanggalMulai, tanggalTutup } = req.body;
+    const jadwalPendaftaran = await Jadwal.create({
+      nama,
+      tanggalMulai,
+      tanggalTutup
+    });
+    return res.status(201).json({
+      status: "success",
+      data: jadwalPendaftaran
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+}
 module.exports = {
+  createJadwalPendaftaran,
   getAllUnitKerja,
   editKuotaUnitKerja,
   permintaanDiterima,
