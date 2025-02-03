@@ -391,6 +391,7 @@ const getMyPermintaanMagang = async (req, res) => {
       tanggalMulai: permintaan.tanggalMulai,
       tanggalSelesai: permintaan.tanggalSelesai,
       status: permintaan.Status,
+      statusState: permintaan.statusState,
       unitKerja: permintaan.UnitKerjaPengajuan?.name || null,
       penempatan: permintaan.UnitKerjaPenempatan?.name || null,
       dokumen: permintaan.Dokumens
@@ -644,7 +645,8 @@ const sendSuratPernyataan = async (req, res) => {
     const userId = req.userId;
     const fileSuratPernyataanSiswa = req.files.fileSuratPernyataanSiswa;
     const fileSuratPernyataanWali = req.files.fileSuratPernyataanWali;
-    console.log(req.files);
+    const fileTabungan = req.files.fileTabungan;
+    console.log(req.files.fileTabungan,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
 
     const permintaan = await Permintaan.findOne({
       where: { userId: userId },
@@ -661,7 +663,7 @@ const sendSuratPernyataan = async (req, res) => {
       });
     }
 
-    if (!fileSuratPernyataanSiswa || !fileSuratPernyataanWali) {
+    if (!fileSuratPernyataanSiswa || !fileSuratPernyataanWali || !fileTabungan) {
       return res.status(400).json({
         status: "error",
         message: "File surat balasan harus diunggah",
@@ -679,6 +681,11 @@ const sendSuratPernyataan = async (req, res) => {
         tipeDokumenId: 7,
         url: req.files.fileSuratPernyataanSiswa[0].filename,
       },
+      {
+        permintaanId: permintaan.id,
+        tipeDokumenId: 10,
+        url: req.files.fileTabungan[0].filename
+      }
     ];
     await Dokumen.bulkCreate(documents);
 
@@ -744,7 +751,7 @@ const rejectStatusPermintaanMagang = async (req, res) => {
     }
 
     await permintaanMagang.update({
-      statusId: 2,
+      statusState: "rejected",
     });
 
     res.status(200).json({

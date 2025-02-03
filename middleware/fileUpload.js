@@ -36,6 +36,7 @@ const uploadFields = upload.fields([
   { name: 'fileSuratBalasan', maxCount: 1 },
   { name: 'fileSuratPernyataanSiswa', maxCount: 1 },
   { name: 'fileSuratPernyataanWali', maxCount: 1 },
+  { name: 'fileTabungan', maxCount: 1 }
 
 
 ]);
