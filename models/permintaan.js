@@ -100,6 +100,11 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
+    statusState: {
+      type: DataTypes.ENUM('completed', 'rejected','reject'),
+      allowNull: false,
+      defaultValue: 'completed'
+    },
     penempatan : {
       type : DataTypes.INTEGER,
       allowNull: true,
