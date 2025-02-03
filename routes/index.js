@@ -11,6 +11,8 @@ const {
     approveStatusPermintaanMagang,
     sendSuratPernyataan,
     downloadSuratBalasan,
+    rejectStatusPermintaanMagang,
+    rejectedStatusPermintaanMagang
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
@@ -50,10 +52,10 @@ router.get('/intern/:id', getPermintaanMagangById);
 // // Endpoint untuk memperbarui status permintaan magang
 router.patch('/intern/:id/approve', approveStatusPermintaanMagang);
 router.post('/intern/diterima/smk/:idSmk', smkGenerateLetter)
-router.patch('/intern/:id/reject', approveStatusPermintaanMagang);
+router.patch('/intern/:id/reject', rejectedStatusPermintaanMagang);
 
 router.post('/intern/send-surat-pernyataan', verifyToken, uploadFields, sendSuratPernyataan );
-
+router.post('/my-intern/reject', verifyToken, rejectStatusPermintaanMagang);
 
 router.post('/intern/send-surat-balasan', verifyToken, uploadFields, sendSuratBalasan);
 
