@@ -115,7 +115,7 @@ const register = async (req, res) => {
               font-family: Arial, sans-serif;
             }
             .header {
-              background-color: #4F46E5;
+              background-color: #3e93e2;
               color: white;
               padding: 20px;
               text-align: center;
@@ -132,9 +132,9 @@ const register = async (req, res) => {
               padding: 12px 24px;
               text-decoration: none;
               background-color: #ffffff; /* Changed to white */
-              color: #4F46E5; /* Changed text color to blue for contrast */
+              color: #3e93e2; /* Changed text color to blue for contrast */
               border-radius: 5px;
-              border: 2px solid #4F46E5; /* Added border */
+              border: 2px solid #3e93e2; /* Added border */
               margin: 20px 0;
             }
             
@@ -163,7 +163,7 @@ const register = async (req, res) => {
             </div>
             <div class="footer">
               <p>Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
-              <p>&copy; ${new Date().getFullYear()} Nama Perusahaan Anda. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} Nagari Intern. All rights reserved.</p>
             </div>
           </div>
         </body>

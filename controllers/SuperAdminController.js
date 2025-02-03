@@ -13,13 +13,15 @@ const {
   Mahasiswa,
   Siswa,
   Dokumen,
-  Jadwal
+  Jadwal,
+  Karyawan
 } = require("../models/index");
 const sequelize = require("sequelize");
 const libre = require('libreoffice-convert');
 const util = require('util');
 const convert = util.promisify(libre.convert);
 const nodemailer = require("nodemailer");
+const bcrypt = require("bcrypt");
 
 const calculateAvailableQuota = async () => {
   const unitKerjas = await UnitKerja.findAll();
@@ -1346,16 +1348,263 @@ const estimateCost = async (req, res) => {
 
 const createJadwalPendaftaran = async (req, res) => {
   try {
-    const {nama, tanggalMulai, tanggalTutup } = req.body;
+    const {nama, tanggalMulai, tanggalTutup} = req.body;
+
+    // Get the latest jadwal
+    const latestJadwal = await Jadwal.findOne({
+      order: [['tanggalTutup', 'DESC']]
+    });
+
+    // Check if there's a latest jadwal and its tanggalTutup hasn't passed yet
+    if (latestJadwal) {
+      const now = new Date();
+      const lastTutup = new Date(latestJadwal.tanggalTutup);
+
+      if (now < lastTutup) {
+        return res.status(400).json({
+          status: "error",
+          message: "Tidak dapat membuat jadwal baru sebelum periode pendaftaran sebelumnya selesai"
+        });
+      }
+    }
+
     const jadwalPendaftaran = await Jadwal.create({
       nama,
       tanggalMulai,
       tanggalTutup
     });
+
     return res.status(201).json({
+      status: "success", 
+      data: jadwalPendaftaran
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error", 
+      error: error.message
+    });
+  }
+}
+
+const editSchedule = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { nama, tanggalMulai, tanggalTutup } = req.body;
+
+    const jadwal = await Jadwal.findByPk(id);
+
+    if (!jadwal) {
+      return res.status(404).json({
+        status: "error",
+        message: "Jadwal tidak ditemukan"
+      });
+    }
+
+    jadwal.nama = nama;
+    jadwal.tanggalMulai = tanggalMulai;
+    jadwal.tanggalTutup = tanggalTutup;
+
+    await jadwal.save();
+
+    return res.status(200).json({
+      status: "success",
+      data: jadwal
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+}
+
+const getJadwalPendaftaran = async (req, res) => {
+  try {
+    const jadwalPendaftaran = await Jadwal.findAll();
+    return res.status(200).json({
       status: "success",
       data: jadwalPendaftaran
     });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+}
+
+
+const createAccountPegawaiCabang = async (req, res) => {
+  try {
+    const { email, password, unitKerjaId } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await Users.create({
+      email,
+      password: hashedPassword,
+      roleId: 2
+    });
+
+    await Karyawan.create({
+      userId: user.id,
+      unitKerjaId,
+    });
+
+    // Get unit kerja name
+    const unitKerja = await UnitKerja.findByPk(unitKerjaId);
+    if (!unitKerja) {
+      throw new Error('Unit kerja not found');
+    }
+
+    const verificationLink = `${req.protocol}://${req.get(
+      "host"
+    )}/verify-email-pegawai?token=${user.id}`;
+
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
+    });
+
+    const mailOptions = {
+      from: `"No Reply" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: 'Account Verification', 
+      replyTo: "no-reply@domain.com",
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <h2 style="color: #4CAF50;">Verifikasi Akun Admin Cabang</h2>
+          <p>Please verify your email by clicking the link below:</p>
+          <p><a href="${verificationLink}">Verify Email</a></p>
+          <p>Thank you for registering!</p>
+          <hr>
+          <p style="color: #666; font-size: 12px;">This is an automated message. Please do not reply to this email as it is not monitored.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return res.status(201).json({
+      status: "success",
+      message: "Account created successfully. Please check your email for verification.",
+      data: {
+        email: user.email,
+        role: user.role,
+        unitKerja: unitKerja.name
+      }
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error", 
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+}
+
+const verifyEmailPegawai = async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    const user = await Users.findByPk(token);
+
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        message: "User not found"
+      });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({
+        status: "error",
+        message: "Email already verified"
+      });
+    }
+
+    user.isVerified = true;
+    await user.save();
+
+    return res.status(200).json({
+      status: "success",
+      message: "Email verified successfully"
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+
+const getAccountPegawai = async (req, res) => {
+  try {
+    const karyawan = await Karyawan.findAll({
+      include: [
+        {
+          model: Users,
+          where: {
+            roleId: 2
+          }
+        },
+        {
+          model: UnitKerja
+        }
+      ]
+    });
+    return res.status(200).json({
+      status: "success",
+      data: karyawan
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+}
+
+const editPasswordPegawai = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await Users.findByPk(id);
+    if (!user) {
+      return res.status(404).json({
+        status: "error",
+        message: "User not found"
+      });
+    }
+
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.status(200).json({
+      status: "success",
+      message: "Password updated successfully"
+    });
+
   } catch (error) {
     console.error("Error:", error);
     return res.status(500).json({
@@ -1382,5 +1631,11 @@ module.exports = {
   generateSuratPengantarMhs,
   generateSuratPengantarSiswa,
   sendSuratPengantar,
-  estimateCost
+  estimateCost,
+  getJadwalPendaftaran,
+  editSchedule,
+  createAccountPegawaiCabang,
+  verifyEmailPegawai,
+  getAccountPegawai,
+  editPasswordPegawai
 };

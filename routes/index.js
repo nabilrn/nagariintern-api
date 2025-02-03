@@ -16,7 +16,8 @@ const {
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
-const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan,sendSuratPengantar, detailUnivDiverifikasi, detailSmkDiverifikasi, generateSuratPengantarMhs, generateSuratPengantarSiswa} = require('../controllers/SuperAdminController');
+const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan,sendSuratPengantar, detailUnivDiverifikasi, detailSmkDiverifikasi, generateSuratPengantarMhs, generateSuratPengantarSiswa,getJadwalPendaftaran, verifyEmailPegawai} = require('../controllers/SuperAdminController');
+const { route } = require('./admin');
 
   
 // Basic route
@@ -63,7 +64,6 @@ router.get('/download-surat-balasan',verifyToken, downloadSuratBalasan);
 
 router.post('/intern/send-surat-pengantar', verifyToken, uploadFields, sendSuratPengantar);
 
-
-// // Endpoint untuk menghapus permintaan magang
-// router.delete('intern/:id', deletePermintaanMagang);
+router.get('/jadwal-pendaftaran', verifyToken, getJadwalPendaftaran);
+router.get('/verify-email-pegawai', verifyEmailPegawai);
 module.exports = router;
