@@ -13,10 +13,11 @@ const {
     downloadSuratBalasan,
     rejectStatusPermintaanMagang,
     rejectedStatusPermintaanMagang
+    
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
-const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan,sendSuratPengantar, detailUnivDiverifikasi, detailSmkDiverifikasi, generateSuratPengantarMhs, generateSuratPengantarSiswa,getJadwalPendaftaran, verifyEmailPegawai} = require('../controllers/SuperAdminController');
+const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan,sendSuratPengantar, detailUnivDiverifikasi, detailSmkDiverifikasi, generateSuratPengantarMhs, generateSuratPengantarSiswa,getJadwalPendaftaran,findOneJadwalPendaftaran, verifyEmailPegawai} = require('../controllers/SuperAdminController');
 const { route } = require('./admin');
 
   
@@ -65,5 +66,6 @@ router.get('/download-surat-balasan',verifyToken, downloadSuratBalasan);
 router.post('/intern/send-surat-pengantar', verifyToken, uploadFields, sendSuratPengantar);
 
 router.get('/jadwal-pendaftaran', verifyToken, getJadwalPendaftaran);
+router.get('/jadwal-curent',verifyToken, findOneJadwalPendaftaran);
 router.get('/verify-email-pegawai', verifyEmailPegawai);
 module.exports = router;
