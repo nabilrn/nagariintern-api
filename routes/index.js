@@ -16,7 +16,7 @@ const {
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
-const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan,sendSuratPengantar, detailUnivDiverifikasi, detailSmkDiverifikasi, generateSuratPengantarMhs, generateSuratPengantarSiswa,getJadwalPendaftaran, verifyEmailPegawai} = require('../controllers/SuperAdminController');
+const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan,sendSuratPengantar, detailUnivDiverifikasi, detailSmkDiverifikasi, generateSuratPengantarMhs, generateSuratPengantarSiswa,getJadwalPendaftaran, verifyEmailPegawai, generateLampiranRekomenMhs, generateLampiranRekomenSiswa} = require('../controllers/SuperAdminController');
 const { route } = require('./admin');
 
   
@@ -66,4 +66,6 @@ router.post('/intern/send-surat-pengantar', verifyToken, uploadFields, sendSurat
 
 router.get('/jadwal-pendaftaran', verifyToken, getJadwalPendaftaran);
 router.get('/verify-email-pegawai', verifyEmailPegawai);
+router.post('/generate-lampiran-rekomen-mhs', verifyToken, generateLampiranRekomenMhs);
+router.post('/generate-lampiran-rekomen-siswa', verifyToken, generateLampiranRekomenSiswa);
 module.exports = router;

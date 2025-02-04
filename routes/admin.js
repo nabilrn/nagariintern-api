@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/AuthMiddleWare');
-const { getAllUnitKerja, editKuotaUnitKerja, getDiverifikasi , estimateCost, createJadwalPendaftaran, editSchedule, createAccountPegawaiCabang, getAccountPegawai, editPasswordPegawai} = require('../controllers/SuperAdminController');
+const { getAllUnitKerja, editKuotaUnitKerja, getDiverifikasi , estimateCost, createJadwalPendaftaran, editSchedule, createAccountPegawaiCabang, getAccountPegawai, editPasswordPegawai, dahsboardData} = require('../controllers/SuperAdminController');
 const { uploadFields } = require('../middleware/fileUpload');
 
 router.get('/unit-kerja', verifyToken, getAllUnitKerja);
@@ -13,6 +13,7 @@ router.put('/jadwal-pendaftaran/:id', verifyToken, editSchedule);
 router.post('/create-account-pegawai-cabang', verifyToken, createAccountPegawaiCabang);
 router.get('/account-pegawai-cabang', verifyToken, getAccountPegawai);
 router.put('/edit-password-pegawai-cabang/:id', verifyToken, editPasswordPegawai);
+router.get('/dashboard', verifyToken, dahsboardData);
 
 
 

@@ -446,6 +446,9 @@ const getMyPermintaanMagang = async (req, res) => {
 const getAllPermintaanMagang = async (req, res) => {
   try {
     const permintaan = await Permintaan.findAll({
+      where: {
+        penempatan: null // Only get records where penempatan is null
+      },
       include: [
         {
           model: Status,
@@ -460,7 +463,7 @@ const getAllPermintaanMagang = async (req, res) => {
               attributes: ["name", "nisn", "no_hp", "alamat"],
             },
             {
-              model: Mahasiswa,
+              model: Mahasiswa, 
               attributes: ["name", "nim", "no_hp", "alamat"],
             },
           ],
@@ -472,7 +475,7 @@ const getAllPermintaanMagang = async (req, res) => {
         },
         {
           model: UnitKerja,
-          as: "UnitKerjaPenempatan",
+          as: "UnitKerjaPenempatan", 
           attributes: ["name"],
         },
         {
