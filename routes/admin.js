@@ -3,6 +3,7 @@ const router = express.Router();
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const { getAllUnitKerja, editKuotaUnitKerja, getDiverifikasi , estimateCost, createJadwalPendaftaran, editSchedule, createAccountPegawaiCabang, getAccountPegawai, editPasswordPegawai} = require('../controllers/SuperAdminController');
 const { uploadFields } = require('../middleware/fileUpload');
+const { cabangPermintaanMagang } = require('../controllers/permintaanMagangController');
 
 router.get('/unit-kerja', verifyToken, getAllUnitKerja);
 router.put('/unit-kerja/:id', verifyToken, editKuotaUnitKerja);
@@ -14,6 +15,7 @@ router.post('/create-account-pegawai-cabang', verifyToken, createAccountPegawaiC
 router.get('/account-pegawai-cabang', verifyToken, getAccountPegawai);
 router.put('/edit-password-pegawai-cabang/:id', verifyToken, editPasswordPegawai);
 
+router.get('/intern', verifyToken, cabangPermintaanMagang);
 
 
 

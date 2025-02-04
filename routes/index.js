@@ -33,7 +33,6 @@ router.post('/intern/siswa', verifyToken, uploadFields, createPermintaanMagangSi
 
 // Endpoint untuk mendapatkan semua permintaan magang
 router.get('/intern', verifyToken, getAllPermintaanMagang);
-
 router.get('/intern/diterima', verifyToken, permintaanDiterima)
 router.get('/intern/diterima/univ/:idUniv/:idProdi', detailUnivDiterima)
 router.get('/intern/diverifikasi/univ/:idUniv/:idProdi/:unitKerjaId', detailUnivDiverifikasi)
