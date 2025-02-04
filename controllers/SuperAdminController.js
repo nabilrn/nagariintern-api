@@ -2008,6 +2008,6 @@ module.exports = {
   editPasswordPegawai,
   generateLampiranRekomenMhs,
   generateLampiranRekomenSiswa,
-  dahsboardData
+  dahsboardData,
   findOneJadwalPendaftaran
 };
