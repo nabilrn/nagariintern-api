@@ -48,6 +48,7 @@ const createPermintaanMagangSiswa = async (req, res) => {
         error: "Semua field wajib diisi",
       });
     }
+    
 
     if (!req.files || !req.files.fileCv || !req.files.fileKtp) {
       return res.status(400).json({
@@ -646,12 +647,17 @@ const sendSuratPernyataan = async (req, res) => {
     const fileSuratPernyataanSiswa = req.files.fileSuratPernyataanSiswa;
     const fileSuratPernyataanWali = req.files.fileSuratPernyataanWali;
     const fileTabungan = req.files.fileTabungan;
-    console.log(req.files.fileTabungan,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    const {nomorRekening} = req.body;
 
     const permintaan = await Permintaan.findOne({
       where: { userId: userId },
     });
 
+    const user = await Mahasiswa.findOne({ where: { userId } }) || await Siswa.findOne({ where: { userId } });
+
+    await user.update({
+      rekening: nomorRekening
+    });
     await permintaan.update({
       statusId: 3,
     });
@@ -662,6 +668,7 @@ const sendSuratPernyataan = async (req, res) => {
         message: "Permintaan magang tidak ditemukan",
       });
     }
+
 
     if (!fileSuratPernyataanSiswa || !fileSuratPernyataanWali || !fileTabungan) {
       return res.status(400).json({
