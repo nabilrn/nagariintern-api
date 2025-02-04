@@ -13,10 +13,12 @@ const {
     downloadSuratBalasan,
     rejectStatusPermintaanMagang,
     rejectedStatusPermintaanMagang
+    
   } = require('../controllers/permintaanMagangController');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
 const uploadFields = require('../middleware/fileUpload');
-const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan,sendSuratPengantar, detailUnivDiverifikasi, detailSmkDiverifikasi, generateSuratPengantarMhs, generateSuratPengantarSiswa,getJadwalPendaftaran, verifyEmailPegawai, generateLampiranRekomenMhs, generateLampiranRekomenSiswa} = require('../controllers/SuperAdminController');
+const { permintaanDiterima,detailUnivDiterima,detailSmkDiterima,univGenerateLetter, smkGenerateLetter ,sendSuratBalasan,sendSuratPengantar, detailUnivDiverifikasi, detailSmkDiverifikasi, generateSuratPengantarMhs, generateSuratPengantarSiswa,getJadwalPendaftaran, verifyEmailPegawai, generateLampiranRekomenMhs, generateLampiranRekomenSiswa, findOneJadwalPendaftaran} = require('../controllers/SuperAdminController');
+
 const { route } = require('./admin');
 
   
@@ -32,7 +34,6 @@ router.post('/intern/siswa', verifyToken, uploadFields, createPermintaanMagangSi
 
 // Endpoint untuk mendapatkan semua permintaan magang
 router.get('/intern', verifyToken, getAllPermintaanMagang);
-
 router.get('/intern/diterima', verifyToken, permintaanDiterima)
 router.get('/intern/diterima/univ/:idUniv/:idProdi', detailUnivDiterima)
 router.get('/intern/diverifikasi/univ/:idUniv/:idProdi/:unitKerjaId', detailUnivDiverifikasi)
@@ -65,6 +66,7 @@ router.get('/download-surat-balasan',verifyToken, downloadSuratBalasan);
 router.post('/intern/send-surat-pengantar', verifyToken, uploadFields, sendSuratPengantar);
 
 router.get('/jadwal-pendaftaran', verifyToken, getJadwalPendaftaran);
+router.get('/jadwal-curent',verifyToken, findOneJadwalPendaftaran);
 router.get('/verify-email-pegawai', verifyEmailPegawai);
 router.post('/generate-lampiran-rekomen-mhs', verifyToken, generateLampiranRekomenMhs);
 router.post('/generate-lampiran-rekomen-siswa', verifyToken, generateLampiranRekomenSiswa);

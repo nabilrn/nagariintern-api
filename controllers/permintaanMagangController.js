@@ -11,6 +11,7 @@ const {
   PerguruanTinggi,
   Prodi,
   Mahasiswa,
+  Karyawan,
 } = require("../models/index");
 const path = require("path");
 const createPermintaanMagangSiswa = async (req, res) => {
@@ -48,6 +49,7 @@ const createPermintaanMagangSiswa = async (req, res) => {
         error: "Semua field wajib diisi",
       });
     }
+    
 
     if (!req.files || !req.files.fileCv || !req.files.fileKtp) {
       return res.status(400).json({
@@ -578,6 +580,143 @@ const getAllPermintaanMagang = async (req, res) => {
   }
 };
 
+
+const cabangPermintaanMagang = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const karyawan = await Karyawan.findOne({ where: { userId } });
+
+    const permintaan = await Permintaan.findAll({
+      where: {
+        penempatan: karyawan.unitKerjaId},
+      include: [
+        {
+          model: Status,
+          attributes: ["name"],
+        },
+        {
+          model: Users,
+          attributes: ["email"],
+          include: [
+            {
+              model: Siswa,
+              attributes: ["name", "nisn", "no_hp", "alamat"],
+            },
+            {
+              model: Mahasiswa,
+              attributes: ["name", "nim", "no_hp", "alamat"],
+            },
+          ],
+        },
+        {
+          model: UnitKerja,
+          as: "UnitKerjaPengajuan",
+          attributes: ["name"],
+        },
+        {
+          model: UnitKerja,
+          as: "UnitKerjaPenempatan",
+          attributes: ["name"],
+        },
+        {
+          model: Dokumen,
+          required: false,
+          include: [
+            {
+              model: TipeDokumen,
+              as: "tipeDokumen",
+              attributes: ["name"],
+            },
+          ],
+        },
+        {
+          model: Smk,
+          attributes: ["name"],
+        },
+        {
+          model: Jurusan,
+          attributes: ["name"],
+        },
+        {
+          model: PerguruanTinggi,
+          attributes: ["name"],
+        },
+        {
+          model: Prodi,
+          attributes: ["name"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    if (!permintaan.length) {
+      return res.status(404).json({
+        message: "Data permintaan magang tidak ditemukan",
+      });
+    }
+
+    const transformedData = permintaan.map((item) => {
+      const baseData = {
+        id: item.id,
+        userId: item.userId,
+        email: item.User.email,
+        type: item.type,
+        tanggalMulai: item.tanggalMulai,
+        tanggalSelesai: item.tanggalSelesai,
+        status: item.Status,
+        unitKerja: item.UnitKerjaPengajuan?.name || null,
+        penempatan: item.UnitKerjaPenempatan?.name || null,
+        dokumen: item.Dokumens
+          ? item.Dokumens.map((doc) => ({
+              tipe: doc.tipeDokumen?.name || null,
+              url: doc.url,
+            }))
+          : [],
+        createdAt: item.createdAt,
+      };
+
+      if (item.type === "siswa") {
+        const siswa = item.User?.Siswas?.[0];
+        baseData.institusi = item.Smk?.name || null;
+        baseData.jurusan = item.Jurusan?.name || null;
+        if (siswa) {
+          baseData.biodata = {
+            nama: siswa.name,
+            nisn: siswa.nisn,
+            noHp: siswa.no_hp,
+            alamat: siswa.alamat,
+          };
+        }
+      } else if (item.type === "mahasiswa") {
+        const mahasiswa = item.User?.Mahasiswas?.[0];
+        baseData.institusi = item.PerguruanTinggi?.name || null;
+        baseData.jurusan = item.Prodi?.name || null;
+        if (mahasiswa) {
+          baseData.biodata = {
+            nama: mahasiswa.name,
+            nim: mahasiswa.nim,
+            noHp: mahasiswa.no_hp,
+            alamat: mahasiswa.alamat,
+          };
+        }
+      }
+
+      return baseData;
+    });
+
+    res.status(200).json({
+      message: "Data permintaan magang berhasil diambil",
+      total: transformedData.length,
+      data: transformedData,
+    });
+  } catch (error) {
+    console.error("Get All Permintaan Magang Error:", error);
+    res.status(500).json({
+      message: "Terjadi kesalahan saat mengambil data permintaan magang",
+      error: error.message,
+    });
+  }
+};
 const getPermintaanMagangById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -649,12 +788,17 @@ const sendSuratPernyataan = async (req, res) => {
     const fileSuratPernyataanSiswa = req.files.fileSuratPernyataanSiswa;
     const fileSuratPernyataanWali = req.files.fileSuratPernyataanWali;
     const fileTabungan = req.files.fileTabungan;
-    console.log(req.files.fileTabungan,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    const {nomorRekening} = req.body;
 
     const permintaan = await Permintaan.findOne({
       where: { userId: userId },
     });
 
+    const user = await Mahasiswa.findOne({ where: { userId } }) || await Siswa.findOne({ where: { userId } });
+
+    await user.update({
+      rekening: nomorRekening
+    });
     await permintaan.update({
       statusId: 3,
     });
@@ -665,6 +809,7 @@ const sendSuratPernyataan = async (req, res) => {
         message: "Permintaan magang tidak ditemukan",
       });
     }
+
 
     if (!fileSuratPernyataanSiswa || !fileSuratPernyataanWali || !fileTabungan) {
       return res.status(400).json({
@@ -858,6 +1003,7 @@ const deletePermintaanMagang = async (req, res) => {
 };
 
 const fs = require("fs");
+const { where } = require("sequelize");
 
 const downloadSuratBalasan = async (req, res) => {
   try {
@@ -956,4 +1102,5 @@ module.exports = {
   getMyPermintaanMagang,
   sendSuratPernyataan,
   downloadSuratBalasan,
+  cabangPermintaanMagang,
 };

@@ -2,6 +2,7 @@ const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 const fs = require("fs");
 const path = require("path");
+const { Op } = require("sequelize");
 const {
   UnitKerja,
   Permintaan,
@@ -1482,6 +1483,35 @@ const getJadwalPendaftaran = async (req, res) => {
   }
 }
 
+const findOneJadwalPendaftaran = async (req, res) => {
+  try {
+    const currentDate = new Date();
+
+    const jadwalPendaftaran = await Jadwal.findOne({
+      where: {
+        tanggalMulai: {
+          [Op.lte]: currentDate // less than or equal to current date
+        },
+        tanggalTutup: {
+          [Op.gte]: currentDate // greater than or equal to current date
+        }
+      }
+    });
+
+    return res.status(200).json({
+      status: "success",
+      data: jadwalPendaftaran ? [jadwalPendaftaran] : [] // Return as array to maintain consistency
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
 
 const createAccountPegawaiCabang = async (req, res) => {
   try {
@@ -1979,4 +2009,5 @@ module.exports = {
   generateLampiranRekomenMhs,
   generateLampiranRekomenSiswa,
   dahsboardData
+  findOneJadwalPendaftaran
 };

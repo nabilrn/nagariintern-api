@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { Users, Roles  } = require("../models/index");
+const { Users, Roles, Karyawan,UnitKerja } = require("../models/index");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const rateLimit = require("express-rate-limit");
@@ -77,6 +77,28 @@ const login = async (req, res) => {
           role: role.name,
         },
       });
+    } else if (role.name === "Admin") {
+      const karyawan = await Karyawan.findOne({
+        where: { userId: user.id },
+        include: {
+          model: UnitKerja,
+          attributes: ["id", "name"],
+        },
+      });
+      console.log(karyawan);
+
+      return res.status(200).json({
+        error: false,
+        message: "Admin login successful",
+        token,
+        refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: role.name,
+          UnitKerja: karyawan.UnitKerja.name,
+        },
+      });
     } else {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -86,13 +108,16 @@ const login = async (req, res) => {
   }
 };
 
-
 const register = async (req, res) => {
   const { email, password } = req.body;
   console.log(req.body);
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await Users.create({ email, password: hashedPassword, roleId: 1 });
+    const user = await Users.create({
+      email,
+      password: hashedPassword,
+      roleId: 1,
+    });
     const token = crypto.randomBytes(32).toString("hex");
     const verificationLink = `${req.protocol}://${req.get(
       "host"
@@ -175,7 +200,7 @@ const register = async (req, res) => {
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
-      }
+      },
     });
 
     const mailOptions = {
@@ -183,12 +208,13 @@ const register = async (req, res) => {
       to: email,
       subject: "Verifikasi Email",
       html: htmlTemplate, // Menggunakan HTML template
-      text: `Silakan verifikasi email Anda dengan mengklik link berikut: ${verificationLink}` // Fallback text untuk email client yang tidak mendukung HTML
+      text: `Silakan verifikasi email Anda dengan mengklik link berikut: ${verificationLink}`, // Fallback text untuk email client yang tidak mendukung HTML
     };
 
     await transporter.sendMail(mailOptions);
     res.status(201).json({
-      message: "User registered. Please check your email to verify your account."
+      message:
+        "User registered. Please check your email to verify your account.",
     });
   } catch (error) {
     console.error("Error in register:", error.message || error);
