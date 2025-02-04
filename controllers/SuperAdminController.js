@@ -132,12 +132,13 @@ const editKuotaUnitKerja = async (req, res) => {
 
 const permintaanDiterima = async (req, res) => {
   try {
+    // Query for universities data with student names
     const universitiesData = await PerguruanTinggi.findAll({
       include: [
         {
           model: Permintaan,
           where: {
-            type: "mahasiswa",
+            type: "mahasiswa", 
             statusId: 1,
             penempatan: {
               [sequelize.Op.not]: null
@@ -148,30 +149,29 @@ const permintaanDiterima = async (req, res) => {
               model: Prodi,
               attributes: ["id", "name"],
             },
+            {
+              model: Users,
+              include: [
+                {
+                  model: Mahasiswa,
+                  attributes: ["name"],
+                }
+              ]
+            },
+            {
+              model: UnitKerja,
+              as: "UnitKerjaPenempatan", 
+              attributes: ["name"],
+            }
           ],
           required: true,
-          attributes: [],
+          attributes: ["tanggalMulai", "tanggalSelesai"]
         },
       ],
-      attributes: [
-        "id",
-        "name",
-        [sequelize.col("Permintaans.Prodi.id"), "prodi_id"],
-        [sequelize.col("Permintaans.Prodi.name"), "prodi_name"],
-        [
-          sequelize.fn("COUNT", sequelize.col("Permintaans.id")),
-          "total_diterima",
-        ],
-      ],
-      group: [
-        "PerguruanTinggi.id",
-        "PerguruanTinggi.name",
-        "Permintaans.Prodi.id",
-        "Permintaans.Prodi.name",
-      ],
-      raw: true,
+      attributes: ["id", "name"],
     });
 
+    // Query for schools data with student names
     const schoolsData = await Smk.findAll({
       include: [
         {
@@ -183,20 +183,27 @@ const permintaanDiterima = async (req, res) => {
               [sequelize.Op.not]: null
             }
           },
+          include: [
+            {
+              model: Users,
+              include: [
+                {
+                  model: Siswa,
+                  attributes: ["name"],
+                }
+              ]
+            },
+            {
+              model: UnitKerja,
+              as: "UnitKerjaPenempatan",
+              attributes: ["name"],
+            }
+          ],
           required: true,
-          attributes: [],
+          attributes: ["tanggalMulai", "tanggalSelesai"]
         },
       ],
-      attributes: [
-        "id",
-        "name",
-        [
-          sequelize.fn("COUNT", sequelize.col("Permintaans.id")),
-          "total_diterima",
-        ],
-      ],
-      group: ["Smk.id", "Smk.name"],
-      raw: true,
+      attributes: ["id", "name"],
     });
 
     if (!universitiesData.length && !schoolsData.length) {
@@ -205,35 +212,67 @@ const permintaanDiterima = async (req, res) => {
       });
     }
 
-    const formattedUniversitiesData = universitiesData.reduce((acc, curr) => {
-      const existingUniv = acc.find(
-        (univ) => univ.nama_institusi === curr.name
-      );
-      const prodiData = {
-        id_prodi: curr.prodi_id,
-        nama_prodi: curr.prodi_name,
-        total_diterima: parseInt(curr.total_diterima),
-      };
-      if (existingUniv) {
-        existingUniv.prodi.push(prodiData);
-      } else {
-        acc.push({
-          id_univ: curr.id,
-          nama_institusi: curr.name,
-          prodi: [prodiData],
+    // Helper function to format date
+    const formatDate = (dateStr) => {
+      const date = new Date(dateStr);
+      const day = date.getDate();
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${day} ${months[date.getMonth()]}`;
+    };
+
+    // Format universities data
+    const formattedUniversitiesData = universitiesData.map(univ => {
+      const prodiMap = new Map();
+      
+      univ.Permintaans.forEach(permintaan => {
+        const prodiId = permintaan.Prodi.id;
+        const prodiName = permintaan.Prodi.name;
+        const studentName = permintaan.User?.Mahasiswas?.[0]?.name || 'Unknown';
+        const penempatan = permintaan.UnitKerjaPenempatan?.name || 'Unknown';
+        const periode = `${formatDate(permintaan.tanggalMulai)} - ${formatDate(permintaan.tanggalSelesai)}`;
+
+        if (!prodiMap.has(prodiId)) {
+          prodiMap.set(prodiId, {
+            id_prodi: prodiId,
+            nama_prodi: prodiName,
+            total_diterima: 0,
+            mahasiswa: []
+          });
+        }
+
+        const prodiData = prodiMap.get(prodiId);
+        prodiData.total_diterima++;
+        prodiData.mahasiswa.push({
+          nama: studentName,
+          penempatan: penempatan,
+          periode: periode
         });
-      }
-      return acc;
-    }, []);
+      });
+
+      return {
+        id_univ: univ.id,
+        nama_institusi: univ.name,
+        prodi: Array.from(prodiMap.values())
+      };
+    });
+
+    // Format schools data
+    const formattedSchoolsData = schoolsData.map(school => ({
+      id_smk: school.id,
+      nama_institusi: school.name,
+      total_diterima: school.Permintaans.length,
+      siswa: school.Permintaans.map(permintaan => ({
+        nama: permintaan.User?.Siswas?.[0]?.name || 'Unknown',
+        penempatan: permintaan.UnitKerjaPenempatan?.name || 'Unknown',
+        periode: `${formatDate(permintaan.tanggalMulai)} - ${formatDate(permintaan.tanggalSelesai)}`
+      }))
+    }));
 
     return res.status(200).json({
       universities: formattedUniversitiesData,
-      schools: schoolsData.map((school) => ({
-        id_smk: school.id,
-        nama_institusi: school.name,
-        total_diterima: parseInt(school.total_diterima),
-      })),
+      schools: formattedSchoolsData
     });
+
   } catch (error) {
     console.error("Error:", error);
     return res.status(500).json({
@@ -864,6 +903,7 @@ const sendSuratBalasan = async (req, res) => {
     for (const response of responseArray) {
       const email = response.email;
       const filePath = req.files.fileSuratBalasan[0].path;
+      const fileName = req.files.fileSuratBalasan[0].filename;
 
       const mailOptions = {
         from: process.env.EMAIL_USER,
@@ -881,7 +921,7 @@ const sendSuratBalasan = async (req, res) => {
         `,
         attachments: [
           {
-            filename: req.files.fileSuratBalasan[0].filename,
+            filename: fileName,
             path: filePath
           }
         ]
@@ -893,7 +933,7 @@ const sendSuratBalasan = async (req, res) => {
         Dokumen.create({
           permintaanId: response.id,
           tipeDokumenId: 5, // Assuming 5 is the ID for Surat Balasan
-          url: filePath
+          url: fileName // Save only the filename instead of full path
         }),
         Permintaan.update({ statusId: 2 }, { where: { id: response.id } })
       ]);
@@ -938,6 +978,7 @@ const sendSuratPengantar = async (req, res) => {
     for (const response of responseArray) {
       const email = response.email;
       const filePath = req.files.SuratPengantar[0].path;
+      const fileName = req.files.SuratPengantar[0].filename;
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
@@ -954,8 +995,8 @@ const sendSuratPengantar = async (req, res) => {
       await Promise.all([
         Dokumen.create({
           permintaanId: response.id,
-          tipeDokumenId: 10,
-          url: filePath
+          tipeDokumenId: 8,
+          url: fileName
         }),
         Permintaan.update({ statusId: 4 }, { where: { id: response.id } })
       ]);
@@ -1153,7 +1194,7 @@ const detailUnivDiverifikasi = async (req, res) => {
           model: Dokumen,
           where: {
             tipeDokumenId: {
-              [sequelize.Op.in]: [6, 7]
+              [sequelize.Op.in]: [6, 7 , 10]
             }
           },
           required: false,
@@ -1474,7 +1515,19 @@ const findOneJadwalPendaftaran = async (req, res) => {
 
 const createAccountPegawaiCabang = async (req, res) => {
   try {
-    const { email, password, unitKerjaId } = req.body;
+    const { email, unitKerjaId } = req.body;
+
+    // Generate random password (8 characters with letters and numbers)
+    const generatePassword = () => {
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let password = '';
+      for (let i = 0; i < 8; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return password;
+    };
+
+    const password = generatePassword();
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await Users.create({
@@ -1509,14 +1562,17 @@ const createAccountPegawaiCabang = async (req, res) => {
     const mailOptions = {
       from: `"No Reply" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: 'Account Verification', 
+      subject: 'Account Verification and Credentials', 
       replyTo: "no-reply@domain.com",
       html: `
         <div style="font-family: Arial, sans-serif; color: #333;">
           <h2 style="color: #4CAF50;">Verifikasi Akun Admin Cabang</h2>
+          <p>Your account has been created with the following credentials:</p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Password:</strong> ${password}</p>
           <p>Please verify your email by clicking the link below:</p>
           <p><a href="${verificationLink}">Verify Email</a></p>
-          <p>Thank you for registering!</p>
+          <p>Please change your password after logging in for the first time.</p>
           <hr>
           <p style="color: #666; font-size: 12px;">This is an automated message. Please do not reply to this email as it is not monitored.</p>
         </div>
@@ -1527,7 +1583,7 @@ const createAccountPegawaiCabang = async (req, res) => {
 
     return res.status(201).json({
       status: "success",
-      message: "Account created successfully. Please check your email for verification.",
+      message: "Account created successfully. Credentials have been sent to the email.",
       data: {
         email: user.email,
         role: user.role,
@@ -1644,6 +1700,288 @@ const editPasswordPegawai = async (req, res) => {
     });
   }
 }
+
+const generateLampiranRekomenMhs = async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const PizZip = require('pizzip');
+    const Docxtemplater = require('docxtemplater');
+
+    // Mock response object to capture permintaanDiterima data
+    const mockRes = {
+      status: () => ({ json: (data) => data })
+    };
+
+    // Get data from permintaanDiterima function 
+    const { universities = [] } = await permintaanDiterima(req, mockRes);
+
+    if (!universities || universities.length === 0) {
+      return res.status(404).json({
+        status: "error", 
+        message: "No data found"
+      });
+    }
+
+    // Format data for template
+    const institusi = universities.reduce((acc, univ) => {
+      if (univ.prodi && Array.isArray(univ.prodi)) {
+        const prodiData = univ.prodi.map(prodiData => ({
+          prodi: prodiData.nama_prodi,
+          univ: univ.nama_institusi,
+          students: Array.isArray(prodiData.mahasiswa) ? 
+            prodiData.mahasiswa.map((student, index) => ({
+              no: index + 1,
+              nama: student.nama,
+              jurusan: prodiData.nama_prodi,
+              penempatan: student.penempatan,
+              periode: student.periode
+            })) : []
+        }));
+        return [...acc, ...prodiData];
+      }
+      return acc;
+    }, []);
+
+    const data = {
+      institusi: institusi
+    };
+
+    // Load template
+    const templatePath = path.join(__dirname, 'templateRekomenMhs.docx');
+    
+    if (!fs.existsSync(templatePath)) {
+      return res.status(404).json({
+        status: "error",
+        message: "Template file not found at: " + templatePath
+      });
+    }
+
+    const content = fs.readFileSync(templatePath, "binary");
+    const zip = new PizZip(content);
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true
+    });
+
+    // Render template
+    doc.render(data);
+    const buffer = doc.getZip().generate({
+      type: "nodebuffer"
+    });
+
+    // Send response
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', 'attachment; filename=lampiran_rekomendasi.docx');
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+
+  } catch (error) {
+    console.error("Error:", error);
+    if (!res.headersSent) {
+      return res.status(500).json({
+        status: "error",
+        message: "Internal server error", 
+        error: error.message
+      });
+    }
+  }
+};
+
+const generateLampiranRekomenSiswa = async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const PizZip = require('pizzip');
+    const Docxtemplater = require('docxtemplater');
+
+    // Mock response object to capture permintaanDiterima data
+    const mockRes = {
+      status: () => ({ json: (data) => data })
+    };
+
+    // Get data from permintaanDiterima function 
+    const { schools = [] } = await permintaanDiterima(req, mockRes);
+
+    if (!schools || schools.length === 0) {
+      return res.status(404).json({
+        status: "error", 
+        message: "No data found"
+      });
+    }
+
+    // Format data for template
+    const institusi = schools.map(school => ({
+      nama_institusi: school.nama_institusi,
+      students: Array.isArray(school.siswa) ? 
+        school.siswa.map((student, index) => ({
+          no: index + 1,
+          nama: student.nama,
+          penempatan: student.penempatan,
+          periode: student.periode
+        })) : []
+    }));
+
+    const data = {
+      institusi: institusi
+    };
+
+    // Load template
+    const templatePath = path.join(__dirname, 'templateRekomenSiswa.docx');
+    
+    if (!fs.existsSync(templatePath)) {
+      return res.status(404).json({
+        status: "error",
+        message: "Template file not found at: " + templatePath
+      });
+    }
+
+    const content = fs.readFileSync(templatePath, "binary");
+    const zip = new PizZip(content);
+    const doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true
+    });
+
+    // Render template
+    doc.render(data);
+    const buffer = doc.getZip().generate({
+      type: "nodebuffer"
+    });
+
+    // Send response
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', 'attachment; filename=lampiran_rekomendasi_siswa.docx');
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+
+  } catch (error) {
+    console.error("Error:", error);
+    if (!res.headersSent) {
+      return res.status(500).json({
+        status: "error",
+        message: "Internal server error", 
+        error: error.message
+      });
+    }
+  }
+};
+
+
+const dahsboardData = async(_, res) => {
+  try {
+
+    // Get total permintaan by status
+    const statusCounts = await Permintaan.findAll({
+      attributes: [
+        'statusId',
+        [sequelize.fn('COUNT', sequelize.col('Permintaan.id')), 'count']
+      ],
+      group: ['statusId']
+    });
+
+    // Get total permintaan by type
+    const typeCounts = await Permintaan.findAll({
+      attributes: [
+        'type',
+        [sequelize.fn('COUNT', sequelize.col('Permintaan.id')), 'count']
+      ],
+      group: ['type']
+    });
+
+    // Get top 5 unit kerja with most interns
+    const topUnitKerja = await Permintaan.findAll({
+      attributes: [
+        'penempatan',
+        [sequelize.fn('COUNT', sequelize.col('Permintaan.id')), 'count']
+      ],
+      include: [{
+        model: UnitKerja,
+        as: 'UnitKerjaPenempatan',
+        attributes: ['name']
+      }],
+      where: {
+        penempatan: {
+          [sequelize.Op.not]: null
+        },
+        statusId: {
+          [sequelize.Op.in]: [2, 3, 4]
+        }
+      },
+      group: ['penempatan', 'UnitKerjaPenempatan.id', 'UnitKerjaPenempatan.name'],
+      order: [[sequelize.fn('COUNT', sequelize.col('Permintaan.id')), 'DESC']],
+      limit: 5
+    });
+
+    // Get total registrants
+    const totalRegistrants = await Users.count({
+      where: {
+        roleId: 1
+      }
+    });
+
+    // Get active internships (status 2,3,4)
+    const activeInternships = await Permintaan.count({
+      where: {
+        statusId: {
+          [sequelize.Op.in]: [2, 3, 4]
+        }
+      }
+    });
+
+    // Get monthly registration trends for current year
+    const currentYear = new Date().getFullYear();
+    const monthlyTrends = await Users.findAll({
+      attributes: [
+        [sequelize.fn('EXTRACT', sequelize.literal('MONTH FROM "createdAt"')), 'month'],
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      where: {
+        roleId: 1,
+        createdAt: {
+          [sequelize.Op.between]: [
+            new Date(`${currentYear}-01-01`),
+            new Date(`${currentYear}-12-31`)
+          ]
+        }
+      },
+      group: [sequelize.fn('EXTRACT', sequelize.literal('MONTH FROM "createdAt"'))]
+    });
+
+    // Format the response
+    const response = {
+      statusCounts: statusCounts.reduce((acc, curr) => {
+        acc[curr.statusId] = curr.get('count');
+        return acc;
+      }, {}),
+      typeCounts: typeCounts.reduce((acc, curr) => {
+        acc[curr.type] = curr.get('count');
+        return acc;
+      }, {}),
+      topUnitKerja: topUnitKerja.map(uk => ({
+        name: uk.UnitKerjaPenempatan?.name,
+        count: uk.get('count')
+      })),
+      totalRegistrants,
+      activeInternships,
+      monthlyRegistrationTrends: monthlyTrends.reduce((acc, curr) => {
+        acc[curr.get('month')] = curr.get('count');
+        return acc;
+      }, {})
+    };
+
+    return res.status(200).json(response);
+    
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error", 
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+}
+
 module.exports = {
   createJadwalPendaftaran,
   getAllUnitKerja,
@@ -1668,5 +2006,8 @@ module.exports = {
   verifyEmailPegawai,
   getAccountPegawai,
   editPasswordPegawai,
+  generateLampiranRekomenMhs,
+  generateLampiranRekomenSiswa,
+  dahsboardData
   findOneJadwalPendaftaran
 };
