@@ -1150,7 +1150,7 @@ const getDiverifikasi = async (req, res) => {
 
 const detailUnivDiverifikasi = async (req, res) => {
   try {
-    const { idUniv, idProdi } = req.params;
+    const { idUniv, idProdi,unitKerjaId } = req.params;
 
     const universitiesDetail = await Permintaan.findAll({
       where: {
@@ -1160,9 +1160,7 @@ const detailUnivDiverifikasi = async (req, res) => {
         },
         ptId: idUniv,
         prodiId: idProdi,
-        penempatan: {
-          [sequelize.Op.not]: null
-        }
+        penempatan: unitKerjaId,
       },
       include: [
         {
@@ -1233,7 +1231,8 @@ const detailUnivDiverifikasi = async (req, res) => {
 
 const detailSmkDiverifikasi = async (req, res) => {
   try {
-    const { idSmk } = req.params;
+    const { idSmk, unitKerjaId } = req.params;
+    console.log(req.params)
 
     const schoolsDetail = await Permintaan.findAll({
       where: {
@@ -1242,9 +1241,7 @@ const detailSmkDiverifikasi = async (req, res) => {
           [sequelize.Op.in]: [2, 3]
         },
         smkId: idSmk,
-        penempatan: {
-          [sequelize.Op.not]: null
-        }
+        unitKerjaId: unitKerjaId
       },
       include: [
         {
@@ -1519,11 +1516,9 @@ const createAccountPegawaiCabang = async (req, res) => {
 
     // Generate random password (8 characters with letters and numbers)
     const generatePassword = () => {
-      const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      const numbers = '0123456789';
-      let password = numbers.charAt(Math.floor(Math.random() * numbers.length)); // Ensure 1 number
-      const chars = letters + numbers;
-      for (let i = 0; i < 7; i++) {
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      let password = '';
+      for (let i = 0; i < 8; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return password;

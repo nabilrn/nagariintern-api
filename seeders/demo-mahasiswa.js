@@ -12,7 +12,8 @@ module.exports = {
     for (let i = 101; i < 201; i++) {
       const firstName = faker.person.firstName();
       const lastName = faker.person.lastName();
-      
+      const unitId = faker.number.int({ min: 1, max: 5 });
+
       usersData.push({
         email: faker.internet.email({ firstName, lastName }),
         password: await bcrypt.hash('password123', 10),
@@ -29,8 +30,9 @@ module.exports = {
           type: 'mahasiswa',
           tanggalMulai: moment().add(faker.number.int({ min: 1, max: 30 }), 'days').format('YYYY-MM-DD'),
           tanggalSelesai: moment().add(faker.number.int({ min: 60, max: 90 }), 'days').format('YYYY-MM-DD'),
-          statusId: 1, // Diproses
-          unitKerjaId: faker.number.int({ min: 1, max: 5 }),
+          statusId: unitId,
+          unitKerjaId: unitId,
+          penempatan: faker.number.int({ min: 1, max: 15 }),
           ptId: faker.number.int({ min: 6, max: 9 }), // Perguruan Tinggi ID
           prodiId: faker.number.int({ min: 1, max: 5 }), // Program Studi ID
           keterangan: faker.datatype.boolean() ? faker.lorem.sentence() : null
@@ -77,6 +79,7 @@ module.exports = {
         tanggalMulai: user.permintaanData.tanggalMulai,
         tanggalSelesai: user.permintaanData.tanggalSelesai,
         unitKerjaId: user.permintaanData.unitKerjaId,
+        penempatan: user.permintaanData.penempatan,
         statusId: user.permintaanData.statusId,
         statusState: ['completed', 'rejected', 'reject'][faker.number.int({ min: 0, max: 2 })],
         keterangan: user.permintaanData.keterangan,
