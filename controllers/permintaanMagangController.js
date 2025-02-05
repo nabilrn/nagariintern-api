@@ -929,7 +929,7 @@ const approveStatusPermintaanMagang = async (req, res) => {
         .json({ error: "Permintaan magang tidak ditemukan." });
     }
 
-    // Validate penempatan exists in UnitKerja
+    // Validate penempatan exists in UnitKerja 
     if (penempatan) {
       const unitKerja = await UnitKerja.findByPk(penempatan);
       if (!unitKerja) {
@@ -960,10 +960,11 @@ const approveStatusPermintaanMagang = async (req, res) => {
       }
     }
 
-    // Update penempatan if provided
+    // Update both penempatan and unitKerjaId if penempatan provided
     const updateData = {};
     if (penempatan) {
       updateData.penempatan = penempatan;
+      updateData.unitKerjaId = penempatan;
     }
 
     await permintaanMagang.update(updateData);
