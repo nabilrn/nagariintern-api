@@ -1519,9 +1519,11 @@ const createAccountPegawaiCabang = async (req, res) => {
 
     // Generate random password (8 characters with letters and numbers)
     const generatePassword = () => {
-      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let password = '';
-      for (let i = 0; i < 8; i++) {
+      const letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const numbers = '0123456789';
+      let password = numbers.charAt(Math.floor(Math.random() * numbers.length)); // Ensure 1 number
+      const chars = letters + numbers;
+      for (let i = 0; i < 7; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return password;
