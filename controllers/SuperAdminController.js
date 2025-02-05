@@ -50,10 +50,10 @@ const calculateAvailableQuota = async () => {
     )?.get('count') || 0;
 
     return {
-      ...unit.toJSON(),
-      sisaKuotaMhs: unit.kuotaMhs - mhsCount,
-      sisaKuotaSiswa: unit.kuotaSiswa - siswaCount
-    };
+          ...unit.toJSON(),
+          sisaKuotaMhs: Math.max(0, (unit.kuotaMhs || 0) - mhsCount),
+          sisaKuotaSiswa: Math.max(0, (unit.kuotaSiswa || 0) - siswaCount)
+        };
   });
 };
 
@@ -2022,6 +2022,111 @@ const dahsboardData = async(_, res) => {
     });
   }
 }
+const getAllPermintaanMagang = async (req, res) => {
+  try {
+    const permintaan = await Permintaan.findAll({
+      include: [
+        {
+          model: Users,
+          include: [
+            {
+              model: Mahasiswa,
+              attributes: ["name", "nim", "no_hp", "alamat"],
+              required: false,
+            },
+            {
+              model: Siswa,
+              attributes: ["name", "nisn", "no_hp", "alamat"],
+              required: false,
+            },
+          ],
+          attributes: ["email"],
+        },
+        {
+          model: PerguruanTinggi,
+          attributes: ["id", "name"],
+        },
+        {
+          model: Prodi,
+          attributes: ["id", "name"],
+        },
+        {
+          model: Smk,
+          attributes: ["id", "name"],
+        },
+        {
+          model: UnitKerja,
+          as: "UnitKerjaPenempatan",
+          attributes: ["id", "name"],
+        },
+        {
+          model: Dokumen,
+          required: false,
+          attributes: ["url"]
+        }
+      ],
+      attributes: ["id", "type", "tanggalMulai", "tanggalSelesai", "createdAt"],
+    });
+
+    return res.status(200).json(permintaan);
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+
+
+const getAllDocument = async (req, res) => {
+  try {
+    const documents = await Dokumen.findAll({
+      include: [{
+        model: Permintaan,
+        include: [
+          {
+            model: Users,
+            include: [
+              {
+                model: Mahasiswa,
+                attributes: ["name"],
+                required: false
+              },
+              {
+                model: Siswa, 
+                attributes: ["name"],
+                required: false
+              }
+            ]
+          }
+        ]
+      }]
+    });
+
+    const formattedDocuments = documents.map(doc => ({
+      id: doc.id,
+      url: doc.url,
+      requestId: doc.permintaanId,
+      name: doc.Permintaan?.User?.Mahasiswas?.[0]?.name || 
+            doc.Permintaan?.User?.Siswas?.[0]?.name || 'Unknown'
+    }));
+
+    return res.status(200).json({
+      status: "success",
+      data: formattedDocuments
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+}
 
 module.exports = {
   createJadwalPendaftaran,
@@ -2050,5 +2155,6 @@ module.exports = {
   generateLampiranRekomenMhs,
   generateLampiranRekomenSiswa,
   dahsboardData,
-  findOneJadwalPendaftaran
+  findOneJadwalPendaftaran,
+  getAllPermintaanMagang
 };

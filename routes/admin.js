@@ -11,7 +11,8 @@ const {
     createAccountPegawaiCabang, 
     getAccountPegawai, 
     editPasswordPegawai, 
-    dahsboardData
+    dahsboardData,
+    getAllPermintaanMagang
 } = require('../controllers/SuperAdminController');
 const { uploadFields } = require('../middleware/fileUpload');
 const { cabangPermintaanMagang } = require('../controllers/permintaanMagangController');
@@ -22,6 +23,7 @@ router.get('/estimate-cost', verifyToken, estimateCost);
 router.get('/account-pegawai-cabang', verifyToken, getAccountPegawai);
 router.get('/dashboard', verifyToken, dahsboardData);
 router.get('/intern', verifyToken, cabangPermintaanMagang);
+router.get('/intern/all', verifyToken, getAllPermintaanMagang);
 
 router.post('/jadwal-pendaftaran', verifyToken, createJadwalPendaftaran);
 router.post('/create-account-pegawai-cabang', verifyToken, createAccountPegawaiCabang);
