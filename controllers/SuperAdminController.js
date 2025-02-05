@@ -1673,7 +1673,14 @@ const editPasswordPegawai = async (req, res) => {
   try {
     const { id } = req.params;
     const { password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Add password validation
+    if (!password || password.length < 6) {
+      return res.status(400).json({
+        status: "error",
+        message: "Password must be at least 6 characters long"
+      });
+    }
 
     const user = await Users.findByPk(id);
     if (!user) {
@@ -1683,23 +1690,55 @@ const editPasswordPegawai = async (req, res) => {
       });
     }
 
+    // Use the same bcrypt settings as in the login process (typically 10 rounds)
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    // Update the password
     user.password = hashedPassword;
     await user.save();
 
-    return res.status(200).json({
-      status: "success",
-      message: "Password updated successfully"
+    // Send email notification with password
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+      }
     });
 
+    const mailOptions = {
+      from: `"No Reply" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: 'Password Updated Successfully',
+      html: `
+        <div style="font-family: Arial, sans-serif; color: #333;">
+          <h2 style="color: #4CAF50;">Password Update Notification</h2>
+          <p>Your password has been successfully updated.</p>
+          <p><strong>Your new password:</strong> ${password}</p>
+          <p>Please keep this password secure and do not share it with anyone.</p>
+          <p>If you did not make this change, please contact the administrator immediately.</p>
+          <hr>
+          <p style="color: #666; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
+        </div>
+      `
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return res.status(200).json({
+      status: "success",
+      message: "Password updated successfully and notification email sent"
+    });
   } catch (error) {
-    console.error("Error:", error);
+    // Log the error but don't send it to client
+    console.error("Error updating password:", error);
     return res.status(500).json({
       status: "error",
-      message: "Internal server error",
-      error: error.message
+      message: "Internal server error"
     });
   }
-}
+};
 
 const generateLampiranRekomenMhs = async (req, res) => {
   try {
