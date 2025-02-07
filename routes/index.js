@@ -52,7 +52,7 @@ router.post('/intern/mahasiswa', verifyToken, uploadFields, createPermintaanMaga
 router.post('/intern/diverifikasi/univ/:idUniv/:idProdi/:unitKerjaId', generateSuratPengantarMhs)
 router.post('/intern/diverifikasi/smk/:idSmk/:unitKerjaId', generateSuratPengantarSiswa)
 router.post('/intern/diterima/univ/:idUniv/:idProdi', univGenerateLetter)
-router.post('/intern/ /smk/:idSmk', smkGenerateLetter)
+router.post('/intern/diterima/smk/:idSmk', smkGenerateLetter)
 router.post('/intern/send-surat-pernyataan', verifyToken, uploadFields, sendSuratPernyataan);
 router.post('/my-intern/reject', verifyToken, rejectStatusPermintaanMagang);
 router.post('/intern/send-surat-pengantar', verifyToken, uploadFields, sendSuratPengantar);

@@ -12,7 +12,10 @@ const {
     getAccountPegawai, 
     editPasswordPegawai, 
     dahsboardData,
-    getAllPermintaanMagang
+    getAllPermintaanMagang,
+    createAbsensi,
+    getAbsensi,
+    getDetailAbsensi,
 } = require('../controllers/SuperAdminController');
 const { uploadFields } = require('../middleware/fileUpload');
 const { cabangPermintaanMagang } = require('../controllers/permintaanMagangController');
@@ -31,5 +34,9 @@ router.post('/create-account-pegawai-cabang', verifyToken, createAccountPegawaiC
 router.patch('/unit-kerja/:id', verifyToken, editKuotaUnitKerja);
 router.patch('/edit-password-pegawai-cabang/:id', verifyToken, editPasswordPegawai);
 router.patch('/jadwal-pendaftaran/:id', verifyToken, editSchedule);
+
+router.post('/absensi', verifyToken, createAbsensi);
+router.get('/absensi', verifyToken, getAbsensi)
+router.get('/absensi/:bulan/:tahun',verifyToken, getDetailAbsensi)
 
 module.exports = router;

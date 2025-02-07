@@ -9,7 +9,7 @@ module.exports = {
     const usersData = [];
     
     // Generate 100 users with their related data
-    for (let i = 101; i < 201; i++) {
+    for (let i = 101; i < 199; i++) {
       const firstName = faker.person.firstName();
       const lastName = faker.person.lastName();
       const unitId = faker.number.int({ min: 1, max: 5 });
@@ -30,7 +30,7 @@ module.exports = {
           type: 'mahasiswa',
           tanggalMulai: moment().add(faker.number.int({ min: 1, max: 30 }), 'days').format('YYYY-MM-DD'),
           tanggalSelesai: moment().add(faker.number.int({ min: 60, max: 90 }), 'days').format('YYYY-MM-DD'),
-          statusId: unitId,
+          statusId: 3,
           unitKerjaId: unitId,
           penempatan: faker.number.int({ min: 1, max: 15 }),
           ptId: faker.number.int({ min: 6, max: 9 }), // Perguruan Tinggi ID
@@ -43,7 +43,7 @@ module.exports = {
     // Create Users
     const createdUsers = await queryInterface.bulkInsert('users', 
       usersData.map((user, index) => ({
-        id: index + 101,
+        id: index + 102,
         email: user.email,
         password: user.password,
         roleId: user.roleId,
@@ -60,7 +60,7 @@ module.exports = {
         name: user.mahasiswaData.name,
         nim: user.mahasiswaData.nim,
         no_hp: user.mahasiswaData.no_hp,
-        userId: index + 101,
+        userId: index + 102,
         alamat: user.mahasiswaData.alamat,
         rekening: user.mahasiswaData.rekening,
         createdAt: faker.date.recent({ days: 30 }),
@@ -71,8 +71,8 @@ module.exports = {
     // Create Permintaan records
     const permintaanRecords = await queryInterface.bulkInsert('permintaan',
       usersData.map((user, index) => ({
-        id: index + 101,
-        userId: index + 101,
+        id: index + 102,
+        userId: index + 102,
         type: user.permintaanData.type,
         ptId: user.permintaanData.ptId,
         prodiId: user.permintaanData.prodiId,
