@@ -2447,7 +2447,7 @@ const createAbsensi = async (req, res) => {
       status: "error",
       message: "Internal server error",
       error: error.message,
->>>>>>> main
+
     });
   }
 };
