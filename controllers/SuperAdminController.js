@@ -1088,12 +1088,12 @@ const sendSuratPengantar = async (req, res) => {
         }),
         Permintaan.update({ statusId: 4 }, { where: { id: response.id } }),
       ]);
-      console.log(response.tanggal_mulai)
-      console.log(response.tanggal_selesai)
+      console.log(response.tanggal_mulai);
+      console.log(response.tanggal_selesai);
       const start = new Date(response.tanggal_mulai);
       const end = new Date(response.tanggal_selesai);
-      console.log(start)
-      console.log(end)
+      console.log(start);
+      console.log(end);
       const currentDate = new Date(start);
       currentDate.setDate(1);
       const kehadiranRecords = [];
@@ -1106,8 +1106,8 @@ const sendSuratPengantar = async (req, res) => {
         });
         currentDate.setMonth(currentDate.getMonth() + 1);
       }
-      console.log(kehadiranRecords, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        await Kehadiran.bulkCreate(kehadiranRecords);
+      console.log(kehadiranRecords, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+      await Kehadiran.bulkCreate(kehadiranRecords);
     }
     res.status(200).json({
       status: "success",
@@ -2289,6 +2289,48 @@ const createAbsensi = async (req, res) => {
   }
 };
 
+const updateAbsensi = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { kehadiran } = req.body;
+    console.log(req.body);
+    console.log(req.params);
+    userId = req.userId;
+    findKaryawan = await Karyawan.findOne({ where: { userId } });
+    if (!findKaryawan) {
+      return res.status(404).json({
+        status: "error",
+        message: "Authentication failed",
+      });
+    }
+
+    const absensi = await Kehadiran.findByPk(id);
+
+    if (!absensi) {
+      return res.status(404).json({
+        status: "error",
+        message: "Absensi not found",
+      });
+    }
+
+    await absensi.update({
+      totalKehadiran: kehadiran,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      data: absensi,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 const getAbsensi = async (req, res) => {
   try {
     const userId = req.userId;
@@ -2366,7 +2408,6 @@ const getAbsensi = async (req, res) => {
       }
     });
 
-    // Transform object to array and sort it by year and month
     const transformedData = Object.values(groupedData)
       .map((item) => {
         const totalPeserta = item.peserta.size;
@@ -2382,7 +2423,7 @@ const getAbsensi = async (req, res) => {
         };
       })
       .sort(
-        (a, b) => b.tahun - a.tahun || monthOrder[a.bulan] - monthOrder[b.bulan]
+        (a, b) => a.tahun - b.tahun || monthOrder[a.bulan] - monthOrder[b.bulan]
       );
 
     res.status(200).json({
@@ -2421,17 +2462,35 @@ const getDetailAbsensi = async (req, res) => {
               model: Users,
               attributes: ["email"],
               include: [
-                { model: Siswa, attributes: ["name", "nisn"], as: "siswaData" },
+                {
+                  model: Siswa,
+                  attributes: ["name", "rekening"],
+                },
                 {
                   model: Mahasiswa,
-                  attributes: ["name", "nim"],
-                  as: "mahasiswaData",
+                  attributes: ["name", "rekening"],
                 },
               ],
             },
             {
               model: UnitKerja,
               as: "UnitKerjaPenempatan",
+              attributes: ["name"],
+            },
+            {
+              model: Smk,
+              attributes: ["name"],
+            },
+            {
+              model: Jurusan,
+              attributes: ["name"],
+            },
+            {
+              model: PerguruanTinggi,
+              attributes: ["name"],
+            },
+            {
+              model: Prodi,
               attributes: ["name"],
             },
           ],
@@ -2446,15 +2505,20 @@ const getDetailAbsensi = async (req, res) => {
     }
 
     const detailedData = absensi.map((item, index) => {
-      const user = item.pesertamagang.Users;
-      const nama = user.siswaData
-        ? user.siswaData.name
-        : user.mahasiswaData?.name;
-      const institusi = user.siswaData ? "Siswa" : "Mahasiswa";
+      const user = item.pesertamagang.User;
+      const nama = user.Mahasiswas?.[0]?.name || user.Siswas?.[0]?.name;
+      const institusi =
+        item.pesertamagang.Smk?.name ||
+        item.pesertamagang.PerguruanTinggi?.name;
+      const rekening =
+        user.Mahasiswas?.[0]?.rekening || user.Siswas?.[0]?.rekening;
+      console.log(user.Mahasiswas?.[0]?.rekening || user.Siswas?.[0]?.rekening);
+
       return {
-        no: index + 1,
+        id: item.id,
         nama,
         institusi,
+        rekening,
         kehadiran: item.totalKehadiran,
       };
     });
@@ -2467,6 +2531,193 @@ const getDetailAbsensi = async (req, res) => {
   } catch (error) {
     console.error("Get Detail Absensi Error:", error);
     res.status(500).json({
+      message: "Terjadi kesalahan saat mengambil data detail absensi",
+      error: error.message,
+    });
+  }
+};
+
+const generateAbsensi = async (req, res) => {
+  try {
+    const { bulan, tahun } = req.params;
+    const { tempat, nama_pimpinan, jabatan } = req.body;
+    console.log(req.body);
+    const userId = req.userId;
+    const karyawan = await Karyawan.findOne({ where: { userId } });
+
+    if (!karyawan) {
+      return res.status(404).json({ message: "Karyawan tidak ditemukan" });
+    }
+
+    const absensi = await Kehadiran.findAll({
+      where: { bulan, tahun },
+      include: [
+        {
+          model: Permintaan,
+          as: "pesertamagang",
+          where: { penempatan: karyawan.unitKerjaId },
+          include: [
+            {
+              model: Users,
+              attributes: ["email"],
+              include: [
+                {
+                  model: Siswa,
+                  attributes: ["name", "rekening"],
+                },
+                {
+                  model: Mahasiswa,
+                  attributes: ["name", "rekening"],
+                },
+              ],
+            },
+            {
+              model: UnitKerja,
+              as: "UnitKerjaPenempatan",
+              attributes: ["name"],
+            },
+            {
+              model: Smk,
+              attributes: ["name"],
+            },
+            {
+              model: Jurusan,
+              attributes: ["name"],
+            },
+            {
+              model: PerguruanTinggi,
+              attributes: ["name"],
+            },
+            {
+              model: Prodi,
+              attributes: ["name"],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!absensi.length) {
+      return res
+        .status(404)
+        .json({ message: "Data detail absensi tidak ditemukan" });
+    }
+
+    const detailedData = absensi.map((item, index) => {
+      const user = item.pesertamagang.User;
+      const nama = user.Mahasiswas?.[0]?.name || user.Siswas?.[0]?.name;
+      const institusi =
+        item.pesertamagang.Smk?.name ||
+        item.pesertamagang.PerguruanTinggi?.name;
+      const rekening =
+        user.Mahasiswas?.[0]?.rekening || user.Siswas?.[0]?.rekening;
+
+      return {
+        id: item.id,
+        nama,
+        institusi,
+        rekening,
+        hadir: item.totalKehadiran,
+        jumlah: (item.totalKehadiran * 19000).toLocaleString(),
+        kode_cb: rekening,
+      };
+    });
+
+    //jumlahkan semua kehadiran dari detailedData
+    const totalKehadiran = detailedData.reduce(
+      (acc, item) => acc + item.hadir,
+      0
+    );
+    const totalBiaya = totalKehadiran * 19000;
+
+    const now = new Date();
+
+    const formatLongDate = (date) => {
+      const day = date.getDate();
+      const months = [
+        "JANUARI",
+        "FEBRUARI",
+        "MARET",
+        "APRIL",
+        "MEI",
+        "JUNI",
+        "JULI",
+        "AGUSTUS",
+        "SEPTEMBER",
+        "OKTOBER",
+        "NOVEMBER",
+        "DESEMBER",
+      ];
+      return `${day} ${months[date.getMonth()]} ${date.getFullYear()}`;
+    };
+    console.log(formatLongDate(now));
+    const tanggal = formatLongDate(now);
+
+    const data = {
+      bulan: bulan.toUpperCase(),
+      tahun: tahun,
+      total: totalBiaya.toLocaleString(),
+      tempat: tempat,
+      tanggal: tanggal,
+      nama_pimpinan: nama_pimpinan,
+      jabatan: jabatan,
+      students: detailedData,
+    };
+
+    try {
+      const templateFile = "templateRekapitulasi.docx";
+      const templatePath = path.resolve(__dirname, templateFile);
+
+      if (!fs.existsSync(templatePath)) {
+        return res.status(404).json({ message: "Template file not found" });
+      }
+
+      const content = fs.readFileSync(templatePath, "binary");
+      const zip = new PizZip(content);
+      const doc = new Docxtemplater(zip, {
+        paragraphLoop: true,
+        linebreaks: true,
+      });
+
+      const dataWithDates = {
+        ...data,
+        bulan: bulan,
+        tahun: tahun,
+        tanggal: tanggal,
+        tempat: tempat,
+        nama_pimpinan: nama_pimpinan,
+        jabatan: jabatan,
+        total: totalBiaya.toLocaleString(),
+        students: data.students.map((student, index) => ({
+          no: index + 1,
+          ...student,
+        })),
+      };
+
+      doc.render(dataWithDates);
+      const docxBuf = doc.getZip().generate({ type: "nodebuffer" });
+      const pdfBuf = await convert(docxBuf, ".pdf", undefined);
+
+      // Set appropriate headers for PDF download
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=absensi_${bulan}_${tahun}.pdf`
+      );
+      return res.send(pdfBuf);
+    } catch (error) {
+      console.error("Document generation error:", {
+        message: error.message,
+        stack: error.stack,
+      });
+      return res.status(500).json({
+        message: "Terjadi kesalahan saat generate dokumen",
+        error: error.message,
+      });
+    }
+  } catch (error) {
+    console.error("Get Detail Absensi Error:", error);
+    return res.status(500).json({
       message: "Terjadi kesalahan saat mengambil data detail absensi",
       error: error.message,
     });
@@ -2505,4 +2756,6 @@ module.exports = {
   createAbsensi,
   getAbsensi,
   getDetailAbsensi,
+  updateAbsensi,
+  generateAbsensi,
 };

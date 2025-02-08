@@ -16,6 +16,8 @@ const {
     createAbsensi,
     getAbsensi,
     getDetailAbsensi,
+    updateAbsensi,
+    generateAbsensi
 } = require('../controllers/SuperAdminController');
 const { uploadFields } = require('../middleware/fileUpload');
 const { cabangPermintaanMagang } = require('../controllers/permintaanMagangController');
@@ -38,5 +40,8 @@ router.patch('/jadwal-pendaftaran/:id', verifyToken, editSchedule);
 router.post('/absensi', verifyToken, createAbsensi);
 router.get('/absensi', verifyToken, getAbsensi)
 router.get('/absensi/:bulan/:tahun',verifyToken, getDetailAbsensi)
+router.patch('/absensi/:id', verifyToken, updateAbsensi);
+router.post('/absensi/:bulan/:tahun/print',verifyToken, generateAbsensi)
+
 
 module.exports = router;
