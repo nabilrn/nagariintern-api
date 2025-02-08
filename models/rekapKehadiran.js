@@ -2,29 +2,34 @@
 const { Model } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
-  class Kehadiran extends Model {
+  class RekapKehadiran extends Model {
     static associate(models) {
-      Kehadiran.belongsTo(models.Permintaan, {
-        foreignKey: "permintaanId",
-        as: "pesertamagang",
+      RekapKehadiran.belongsTo(models.Karyawan, {
+        foreignKey: "karyawanId",
+        as: "karyawan",
         onDelete: "CASCADE",
       });
     }
   }
-  Kehadiran.init(
+
+  RekapKehadiran.init(
     {
-      permintaanId: {
+      id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+      },
+      karyawanId: {
         type: DataTypes.INTEGER,
         allowNull: false,
         references: {
-          model: "Permintaan",
+          model: "Karyawan",
           key: "id",
         },
       },
-
-      totalKehadiran: {
+      tahun: {
         type: DataTypes.INTEGER,
-        allowNull: true,
+        allowNull: false,
       },
       bulan: {
         type: DataTypes.ENUM(
@@ -41,19 +46,20 @@ module.exports = (sequelize, DataTypes) => {
           "November",
           "Desember"
         ),
-        allowNull: true,
+        allowNull: false,
       },
-      tahun: {
-        type: DataTypes.INTEGER,
+      url: {
+        type: DataTypes.STRING,
         allowNull: true,
       },
     },
     {
       sequelize,
-      modelName: "Kehadiran",
-      tableName: "kehadiran",
+      modelName: "RekapKehadiran",
+      tableName: "rekap_kehadiran",
       timestamps: true,
     }
   );
-  return Kehadiran;
+
+  return RekapKehadiran;
 };

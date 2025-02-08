@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const { verifyToken } = require('../middleware/AuthMiddleWare');
+const uploadFields = require('../middleware/fileUpload');
 const { 
     getAllUnitKerja, 
     editKuotaUnitKerja, 
@@ -21,8 +22,8 @@ const {
     getDetailAbsensi,
     updateAbsensi,
     generateAbsensi,
-    getRekapAbsensi
-
+    getRekapAbsensi,
+    sendAbsensi
 } = require('../controllers/SuperAdminController');
 const { cabangPermintaanMagang } = require('../controllers/permintaanMagangController');
 
@@ -54,6 +55,6 @@ router.get('/absensi', verifyToken, getAbsensi)
 router.get('/absensi/:bulan/:tahun',verifyToken, getDetailAbsensi)
 router.patch('/absensi/:id', verifyToken, updateAbsensi);
 router.post('/absensi/:bulan/:tahun/print',verifyToken, generateAbsensi)
-
+router.post('/absensi/:bulan/:tahun/upload',verifyToken, uploadFields, sendAbsensi)
 
 module.exports = router;

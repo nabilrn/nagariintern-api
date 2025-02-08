@@ -18,6 +18,7 @@ const {
   Karyawan,
   Kehadiran,
   Status,
+  RekapKehadiran,
 } = require("../models/index");
 const sequelize = require("sequelize");
 const libre = require("libreoffice-convert");
@@ -1421,8 +1422,6 @@ const detailSmkDiverifikasi = async (req, res) => {
   }
 };
 
-
-
 const createJadwalPendaftaran = async (req, res) => {
   try {
     const { nama, tanggalMulai, tanggalTutup } = req.body;
@@ -1431,15 +1430,16 @@ const createJadwalPendaftaran = async (req, res) => {
     const existingPermintaan = await Permintaan.findOne({
       where: {
         statusId: {
-          [Op.in]: [1, 2, 3]
-        }
-      }
+          [Op.in]: [1, 2, 3],
+        },
+      },
     });
 
     if (existingPermintaan) {
       return res.status(400).json({
         status: "error",
-        message: "Tidak dapat membuat jadwal baru karena masih ada permintaan yang sedang diproses"
+        message:
+          "Tidak dapat membuat jadwal baru karena masih ada permintaan yang sedang diproses",
       });
     }
 
@@ -1726,7 +1726,7 @@ const editPasswordPegawai = async (req, res) => {
     if (!password || password.length < 6) {
       return res.status(400).json({
         status: "error",
-        message: "Password must be at least 6 characters long", 
+        message: "Password must be at least 6 characters long",
       });
     }
 
@@ -1741,7 +1741,7 @@ const editPasswordPegawai = async (req, res) => {
     const user = await Users.findByPk(id);
     if (!user) {
       return res.status(404).json({
-        status: "error", 
+        status: "error",
         message: "User not found",
       });
     }
@@ -1790,7 +1790,7 @@ const editPasswordPegawai = async (req, res) => {
     // Log the error but don't send it to client
     console.error("Error updating password:", error);
     return res.status(500).json({
-      status: "error", 
+      status: "error",
       message: "Internal server error",
     });
   }
@@ -1980,29 +1980,29 @@ const dahsboardData = async (_, res) => {
     const diproses = await Permintaan.count({
       where: {
         statusId: 1,
-        penempatan: null
-      }
+        penempatan: null,
+      },
     });
 
     const diterima = await Permintaan.count({
       where: {
         statusId: 1,
         penempatan: {
-          [sequelize.Op.not]: null
-        }
-      }
+          [sequelize.Op.not]: null,
+        },
+      },
     });
 
     const pesertaMagangAktif = await Permintaan.count({
       where: {
-        statusId: 4
-      }
+        statusId: 4,
+      },
     });
 
     const pesertaSelesai = await Permintaan.count({
       where: {
-        statusId: 7
-      }
+        statusId: 7,
+      },
     });
 
     // Get total permintaan by type
@@ -2047,18 +2047,18 @@ const dahsboardData = async (_, res) => {
     // Get total registrants
     const totalRegistrants = await Users.count({
       where: {
-      roleId: 1,
+        roleId: 1,
       },
-      include: [{
-      model: Permintaan, 
-      where: {
-        penempatan: null
-      },
-      required: true
-      }]
+      include: [
+        {
+          model: Permintaan,
+          where: {
+            penempatan: null,
+          },
+          required: true,
+        },
+      ],
     });
-
-    
 
     // Get monthly registration trends for current year
     const currentYear = new Date().getFullYear();
@@ -2090,7 +2090,7 @@ const dahsboardData = async (_, res) => {
         diproses,
         diterima,
         pesertaMagangAktif,
-        pesertaSelesai
+        pesertaSelesai,
       },
       typeCounts: typeCounts.reduce((acc, curr) => {
         acc[curr.type] = curr.get("count");
@@ -2101,7 +2101,7 @@ const dahsboardData = async (_, res) => {
         count: uk.get("count"),
       })),
       totalRegistrants,
-      
+
       monthlyRegistrationTrends: monthlyTrends.reduce((acc, curr) => {
         acc[curr.get("month")] = curr.get("count");
         return acc;
@@ -2117,7 +2117,7 @@ const dahsboardData = async (_, res) => {
       error: error.message,
     });
   }
-}
+};
 const getSelesai = async (req, res) => {
   try {
     // First update status to 7 for completed internships
@@ -2127,17 +2127,17 @@ const getSelesai = async (req, res) => {
       {
         where: {
           tanggalSelesai: {
-            [Op.lt]: currentDate
+            [Op.lt]: currentDate,
           },
-          statusId: 4 // Only update if current status is 4 (active)
-        }
+          statusId: 4, // Only update if current status is 4 (active)
+        },
       }
     );
 
     // Then get all data with status 7
     const permintaan = await Permintaan.findAll({
       where: {
-        statusId: 7
+        statusId: 7,
       },
       include: [
         {
@@ -2191,7 +2191,7 @@ const getSelesai = async (req, res) => {
       error: error.message,
     });
   }
-}
+};
 
 const getDetailSelesai = async (req, res) => {
   try {
@@ -2199,7 +2199,6 @@ const getDetailSelesai = async (req, res) => {
 
     // Ensure the id is parsed as an integer
     const permintaanId = parseInt(id, 10);
-
 
     if (isNaN(permintaanId)) {
       return res.status(400).json({
@@ -2285,7 +2284,7 @@ const getMulaiMagang = async (_, res) => {
   try {
     const data = await Permintaan.findAll({
       where: {
-        statusId: 4
+        statusId: 4,
       },
       include: [
         {
@@ -2307,26 +2306,30 @@ const getMulaiMagang = async (_, res) => {
           model: UnitKerja,
           as: "UnitKerjaPenempatan",
           attributes: ["name"],
-        }
+        },
       ],
-      attributes: ["id", "tanggalMulai", "tanggalSelesai"] // Added id to attributes
+      attributes: ["id", "tanggalMulai", "tanggalSelesai"], // Added id to attributes
     });
 
     // Format the response data
-    const formattedData = data.map(item => ({
+    const formattedData = data.map((item) => ({
       id: item.id, // Added id to response
-      nama: item.User?.Mahasiswas?.[0]?.name || item.User?.Siswas?.[0]?.name || null,
-      id_number: item.User?.Mahasiswas?.[0]?.nim || item.User?.Siswas?.[0]?.nisn || null,
+      nama:
+        item.User?.Mahasiswas?.[0]?.name ||
+        item.User?.Siswas?.[0]?.name ||
+        null,
+      id_number:
+        item.User?.Mahasiswas?.[0]?.nim || item.User?.Siswas?.[0]?.nisn || null,
       tempat_magang: item.UnitKerjaPenempatan?.name || null,
       tanggal_mulai: item.tanggalMulai,
-      tanggal_selesai: item.tanggalSelesai
+      tanggal_selesai: item.tanggalSelesai,
     }));
 
     return res.status(200).json(formattedData);
   } catch (error) {
     console.error("Error:", error);
     return res.status(500).json({
-      status: "error", 
+      status: "error",
       message: "Internal server error",
       error: error.message,
     });
@@ -2341,14 +2344,14 @@ const editWaktuSelesaiPesertaMagang = async (req, res) => {
     const permintaan = await Permintaan.findOne({
       where: {
         id: id,
-        statusId: 4 
-      }
+        statusId: 4,
+      },
     });
 
     if (!permintaan) {
       return res.status(404).json({
         status: "error",
-        message: "Data not found or cannot be edited (must have status 4)"
+        message: "Data not found or cannot be edited (must have status 4)",
       });
     }
 
@@ -2356,10 +2359,9 @@ const editWaktuSelesaiPesertaMagang = async (req, res) => {
     await permintaan.save();
 
     return res.status(200).json({
-
-      status: "success", 
+      status: "success",
       message: "Data updated successfully",
-      data: permintaan
+      data: permintaan,
     });
   } catch (error) {
     console.error("Error:", error);
@@ -2402,7 +2404,6 @@ const createAbsensi = async (req, res) => {
       status: "error",
       message: "Internal server error",
       error: error.message,
-
     });
   }
 };
@@ -2622,6 +2623,22 @@ const getDetailAbsensi = async (req, res) => {
         .json({ message: "Data detail absensi tidak ditemukan" });
     }
 
+    const rekapKehadiran = await RekapKehadiran.findOne({
+      where: {
+        bulan,
+        tahun,
+        karyawanId: karyawan.id,
+      },
+      
+      include: [
+        {
+          model: Karyawan,
+          as: "karyawan",
+        },
+      ],
+    });
+      
+
     const detailedData = absensi.map((item, index) => {
       const user = item.pesertamagang.User;
       const nama = user.Mahasiswas?.[0]?.name || user.Siswas?.[0]?.name;
@@ -2644,7 +2661,9 @@ const getDetailAbsensi = async (req, res) => {
     res.status(200).json({
       message: "Data detail absensi berhasil diambil",
       total: detailedData.length,
+      rekapKehadiran:rekapKehadiran,
       data: detailedData,
+      
     });
   } catch (error) {
     console.error("Get Detail Absensi Error:", error);
@@ -2842,6 +2861,60 @@ const generateAbsensi = async (req, res) => {
   }
 };
 
+const sendAbsensi = async (req, res) => {
+  try {
+    const { bulan, tahun } = req.params;
+    const fileRekap = req.files.fileRekap;
+
+    if (!fileRekap) {
+      return res.status(400).json({
+        status: "error",
+        message: "File rekap absensi is required",
+      });
+    }
+
+    const userId = req.userId;
+    const karyawan = await Karyawan.findOne({ where: { userId } });
+
+    if (!karyawan) {
+      return res.status(404).json({ message: "Karyawan tidak ditemukan" });
+    }
+
+    // Find or create rekap kehadiran
+    const [rekapitulasi, created] = await RekapKehadiran.findOrCreate({
+      where: { bulan, tahun, karyawanId: karyawan.id },
+      defaults: {
+        karyawanId: karyawan.id,
+        bulan: bulan,
+        tahun: tahun,
+        url: req.files.fileRekap[0].filename,
+      },
+    });
+
+    // If record exists, update it
+    if (!created) {
+      await rekapitulasi.update({
+        bulan: bulan,
+        tahun: tahun,
+        karyawanId: karyawan.id,
+        url: req.files.fileRekap[0].filename,
+      });
+    }
+    res.status(201).json({
+      status: "success",
+      message: "Rekap absensi berhasil diunggah",
+      data: rekapitulasi,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 const getRekapAbsensi = async (req, res) => {
   try {
     // Get all attendance records with related data
@@ -2849,22 +2922,22 @@ const getRekapAbsensi = async (req, res) => {
       include: [
         {
           model: Permintaan,
-          as: 'pesertamagang',
+          as: "pesertamagang",
           include: [
             {
-              model: UnitKerja, 
-              as: 'UnitKerjaPenempatan',
-              attributes: ['name']
-            }
-          ]
-        }
-      ]
+              model: UnitKerja,
+              as: "UnitKerjaPenempatan",
+              attributes: ["name"],
+            },
+          ],
+        },
+      ],
     });
 
     // Group data by unit kerja
     const groupedData = {};
 
-    absensi.forEach(record => {
+    absensi.forEach((record) => {
       const unitKerja = record.pesertamagang?.UnitKerjaPenempatan?.name;
       const bulan = record.bulan;
       const tahun = record.tahun;
@@ -2879,7 +2952,7 @@ const getRekapAbsensi = async (req, res) => {
           bulan: bulan,
           tahun: tahun,
           total_peserta: new Set(), // Use Set to count unique participants
-          total_biaya: 0
+          total_biaya: 0,
         };
       }
 
@@ -2887,13 +2960,13 @@ const getRekapAbsensi = async (req, res) => {
       groupedData[key].total_biaya += record.totalKehadiran * 19000; // Biaya per kehadiran
     });
 
-    // Convert grouped data to array and format the response 
-    const formattedData = Object.values(groupedData).map(item => ({
+    // Convert grouped data to array and format the response
+    const formattedData = Object.values(groupedData).map((item) => ({
       unit_kerja: item.unit_kerja,
       bulan: item.bulan,
       tahun: item.tahun,
       total_peserta: item.total_peserta.size,
-      total_biaya: item.total_biaya.toLocaleString('id-ID')
+      total_biaya: item.total_biaya.toLocaleString("id-ID"),
     }));
 
     // Sort by unit kerja, year, and month
@@ -2904,22 +2977,34 @@ const getRekapAbsensi = async (req, res) => {
       if (a.tahun !== b.tahun) {
         return b.tahun - a.tahun;
       }
-      const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      const months = [
+        "Januari",
+        "Februari",
+        "Maret",
+        "April",
+        "Mei",
+        "Juni",
+        "Juli",
+        "Agustus",
+        "September",
+        "Oktober",
+        "November",
+        "Desember",
+      ];
       return months.indexOf(a.bulan) - months.indexOf(b.bulan);
     });
 
     return res.status(200).json({
-      status: 'success',
+      status: "success",
       total: formattedData.length,
-      data: formattedData
+      data: formattedData,
     });
-
   } catch (error) {
-    console.error('Error in getRekapAbsensi:', error);
+    console.error("Error in getRekapAbsensi:", error);
     return res.status(500).json({
-      status: 'error',
-      message: 'Internal server error', 
-      error: error.message
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
     });
   }
 };
@@ -2954,11 +3039,12 @@ module.exports = {
   getSelesai,
   getDetailSelesai,
   getMulaiMagang,
-  editWaktuSelesaiPesertaMagang,  
+  editWaktuSelesaiPesertaMagang,
   createAbsensi,
   getAbsensi,
   getDetailAbsensi,
   updateAbsensi,
   generateAbsensi,
   getRekapAbsensi,
+  sendAbsensi,
 };
