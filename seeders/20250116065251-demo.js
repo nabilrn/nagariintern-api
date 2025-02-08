@@ -34,7 +34,7 @@ module.exports = {
           tanggalSelesai: moment()
             .add(faker.number.int({ min: 60, max: 90 }), "days")
             .format("YYYY-MM-DD"),
-          statusId: faker.number.int({ min: 1, max: 4 }),
+          statusId: 3,
           unitKerjaId: unitId,
           penempatan: unitId,
           smkId: faker.number.int({ min: 1, max: 5 }),
@@ -48,7 +48,7 @@ module.exports = {
     const createdUsers = await queryInterface.bulkInsert(
       "users",
       usersData.map((user, index) => ({
-        id: index + 1, // Explicit ID assignment
+        id: index + 2, // Explicit ID assignment
         email: user.email,
         password: user.password,
         roleId: user.roleId,
@@ -66,7 +66,7 @@ module.exports = {
         name: user.siswaData.name,
         nisn: user.siswaData.nisn,
         no_hp: user.siswaData.no_hp,
-        userId: index + 1,
+        userId: index + 2,
         alamat: user.siswaData.alamat,
         createdAt: faker.date.recent({ days: 30 }),
         updatedAt: faker.date.recent({ days: 30 }),
@@ -77,8 +77,8 @@ module.exports = {
     const permintaanRecords = await queryInterface.bulkInsert(
       "permintaan",
       usersData.map((user, index) => ({
-        id: index + 1,
-        userId: index + 1,
+        id: index + 2,
+        userId: index + 2,
         type: user.permintaanData.type,
         smkId: user.permintaanData.smkId,
         jurusanId: user.permintaanData.jurusanId,
@@ -99,7 +99,7 @@ module.exports = {
     // Create Dokumen records
     const dokumenData = [];
     usersData.forEach((user, index) => {
-      const permintaanId = index + 1;
+      const permintaanId = index + 2;
       const timestamp = Date.now();
 
       // CV Document

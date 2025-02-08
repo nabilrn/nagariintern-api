@@ -1,7 +1,7 @@
 require("dotenv").config();
-const { Users, Roles, Karyawan,UnitKerja } = require("../models/index");
+const { Users, Roles, Karyawan, UnitKerja } = require("../models/index");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
@@ -110,14 +110,17 @@ const login = async (req, res) => {
 
 const register = async (req, res) => {
   const { email, password } = req.body;
-  console.log(req.body);
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
+
     const user = await Users.create({
       email,
       password: hashedPassword,
       roleId: 1,
     });
+
+    console.log(req.body);
+
     const token = crypto.randomBytes(32).toString("hex");
     const verificationLink = `${req.protocol}://${req.get(
       "host"
@@ -229,6 +232,8 @@ const verifyEmail = async (req, res) => {
     const user = await Users.findOne({
       where: { emailVerificationToken: token },
     });
+    
+
     if (!user) {
       return res.status(400).json({ error: "Invalid or expired token" });
     }
