@@ -6,7 +6,6 @@ const {
     getAllUnitKerja, 
     editKuotaUnitKerja, 
     getDiverifikasi , 
-    estimateCost, 
     createJadwalPendaftaran, 
     editSchedule, 
     createAccountPegawaiCabang, 
@@ -21,20 +20,20 @@ const {
     getAbsensi,
     getDetailAbsensi,
     updateAbsensi,
-    generateAbsensi
+    generateAbsensi,
+    getRekapAbsensi
 
 } = require('../controllers/SuperAdminController');
-const { uploadFields } = require('../middleware/fileUpload');
 const { cabangPermintaanMagang } = require('../controllers/permintaanMagangController');
 
 router.get('/unit-kerja', verifyToken, getAllUnitKerja);
 router.get('/diverifikasi', verifyToken, getDiverifikasi);
-router.get('/estimate-cost', verifyToken, estimateCost);
 router.get('/account-pegawai-cabang', verifyToken, getAccountPegawai);
 router.get('/dashboard', verifyToken, dahsboardData);
 router.get('/intern', verifyToken, cabangPermintaanMagang);
 router.get('/intern/done', verifyToken, getSelesai);
 router.get('/intern/done/:id', verifyToken, getDetailSelesai);
+router.get('/absensi/rekap', verifyToken, getRekapAbsensi);
 router.get('/intern/start', verifyToken, getMulaiMagang);
 router.get('/uploads/:filename', (req, res) => {
     const { filename } = req.params;

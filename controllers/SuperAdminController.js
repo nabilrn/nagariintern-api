@@ -1421,82 +1421,7 @@ const detailSmkDiverifikasi = async (req, res) => {
   }
 };
 
-const estimateCost = async (req, res) => {
-  try {
-    const workingDayRate = 19000; // Cost per working day
 
-    const participants = await Permintaan.findAll({
-      where: {
-        statusId: 4,
-      },
-      attributes: ["id", "tanggalMulai", "tanggalSelesai"],
-      include: [
-        {
-          model: Users,
-          include: [
-            {
-              model: Mahasiswa,
-              attributes: ["name"],
-              required: false,
-            },
-            {
-              model: Siswa,
-              attributes: ["name"],
-              required: false,
-            },
-          ],
-        },
-      ],
-    });
-
-    const estimations = participants.map((participant) => {
-      const startDate = new Date(participant.tanggalMulai);
-      const endDate = new Date(participant.tanggalSelesai);
-
-      // Calculate total days
-      const totalDays =
-        Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-
-      // Calculate working days (Mon-Fri only)
-      let workingDays = 0;
-      let currentDate = new Date(startDate);
-      while (currentDate <= endDate) {
-        // 0 is Sunday, 6 is Saturday
-        if (currentDate.getDay() !== 0 && currentDate.getDay() !== 6) {
-          workingDays++;
-        }
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-
-      // Calculate total cost (only for working days)
-      const totalCost = workingDays * workingDayRate;
-
-      return {
-        id: participant.id,
-        name:
-          participant.User?.Mahasiswas?.[0]?.name ||
-          participant.User?.Siswas?.[0]?.name,
-        startDate: participant.tanggalMulai,
-        endDate: participant.tanggalSelesai,
-        totalDays,
-        workingDays,
-        totalCost,
-      };
-    });
-
-    return res.status(200).json({
-      status: "success",
-      data: estimations,
-    });
-  } catch (error) {
-    console.error("Error:", error);
-    return res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-      error: error.message,
-    });
-  }
-};
 
 const createJadwalPendaftaran = async (req, res) => {
   try {
@@ -1801,14 +1726,22 @@ const editPasswordPegawai = async (req, res) => {
     if (!password || password.length < 6) {
       return res.status(400).json({
         status: "error",
-        message: "Password must be at least 6 characters long",
+        message: "Password must be at least 6 characters long", 
+      });
+    }
+
+    // Check if password contains at least one number
+    if (!/\d/.test(password)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Password must contain at least one number",
       });
     }
 
     const user = await Users.findByPk(id);
     if (!user) {
       return res.status(404).json({
-        status: "error",
+        status: "error", 
         message: "User not found",
       });
     }
@@ -1857,7 +1790,7 @@ const editPasswordPegawai = async (req, res) => {
     // Log the error but don't send it to client
     console.error("Error updating password:", error);
     return res.status(500).json({
-      status: "error",
+      status: "error", 
       message: "Internal server error",
     });
   }
@@ -2043,13 +1976,33 @@ const generateLampiranRekomenSiswa = async (req, res) => {
 
 const dahsboardData = async (_, res) => {
   try {
-    // Get total permintaan by status
-    const statusCounts = await Permintaan.findAll({
-      attributes: [
-        "statusId",
-        [sequelize.fn("COUNT", sequelize.col("Permintaan.id")), "count"],
-      ],
-      group: ["statusId"],
+    // Get counts for each status category
+    const diproses = await Permintaan.count({
+      where: {
+        statusId: 1,
+        penempatan: null
+      }
+    });
+
+    const diterima = await Permintaan.count({
+      where: {
+        statusId: 1,
+        penempatan: {
+          [sequelize.Op.not]: null
+        }
+      }
+    });
+
+    const pesertaMagangAktif = await Permintaan.count({
+      where: {
+        statusId: 4
+      }
+    });
+
+    const pesertaSelesai = await Permintaan.count({
+      where: {
+        statusId: 7
+      }
     });
 
     // Get total permintaan by type
@@ -2094,18 +2047,18 @@ const dahsboardData = async (_, res) => {
     // Get total registrants
     const totalRegistrants = await Users.count({
       where: {
-        roleId: 1,
+      roleId: 1,
       },
+      include: [{
+      model: Permintaan, 
+      where: {
+        penempatan: null
+      },
+      required: true
+      }]
     });
 
-    // Get active internships (status 2,3,4)
-    const activeInternships = await Permintaan.count({
-      where: {
-        statusId: {
-          [sequelize.Op.in]: [2, 3, 4],
-        },
-      },
-    });
+    
 
     // Get monthly registration trends for current year
     const currentYear = new Date().getFullYear();
@@ -2133,10 +2086,12 @@ const dahsboardData = async (_, res) => {
 
     // Format the response
     const response = {
-      statusCounts: statusCounts.reduce((acc, curr) => {
-        acc[curr.statusId] = curr.get("count");
-        return acc;
-      }, {}),
+      statusCounts: {
+        diproses,
+        diterima,
+        pesertaMagangAktif,
+        pesertaSelesai
+      },
       typeCounts: typeCounts.reduce((acc, curr) => {
         acc[curr.type] = curr.get("count");
         return acc;
@@ -2146,7 +2101,7 @@ const dahsboardData = async (_, res) => {
         count: uk.get("count"),
       })),
       totalRegistrants,
-      activeInternships,
+      
       monthlyRegistrationTrends: monthlyTrends.reduce((acc, curr) => {
         acc[curr.get("month")] = curr.get("count");
         return acc;
@@ -2459,8 +2414,8 @@ const updateAbsensi = async (req, res) => {
     console.log(req.body);
     console.log(req.params);
     userId = req.userId;
-    findKaryawan = await Karyawan.findOne({ where: { userId } });
-    if (!findKaryawan) {
+    Karyawan = await Karyawan.findOne({ where: { userId } });
+    if (!Karyawan) {
       return res.status(404).json({
         status: "error",
         message: "Authentication failed",
@@ -2887,6 +2842,88 @@ const generateAbsensi = async (req, res) => {
   }
 };
 
+const getRekapAbsensi = async (req, res) => {
+  try {
+    // Get all attendance records with related data
+    const absensi = await Kehadiran.findAll({
+      include: [
+        {
+          model: Permintaan,
+          as: 'pesertamagang',
+          include: [
+            {
+              model: UnitKerja, 
+              as: 'UnitKerjaPenempatan',
+              attributes: ['name']
+            }
+          ]
+        }
+      ]
+    });
+
+    // Group data by unit kerja
+    const groupedData = {};
+
+    absensi.forEach(record => {
+      const unitKerja = record.pesertamagang?.UnitKerjaPenempatan?.name;
+      const bulan = record.bulan;
+      const tahun = record.tahun;
+
+      if (!unitKerja) return;
+
+      const key = `${unitKerja}-${bulan}-${tahun}`;
+
+      if (!groupedData[key]) {
+        groupedData[key] = {
+          unit_kerja: unitKerja,
+          bulan: bulan,
+          tahun: tahun,
+          total_peserta: new Set(), // Use Set to count unique participants
+          total_biaya: 0
+        };
+      }
+
+      groupedData[key].total_peserta.add(record.permintaanId);
+      groupedData[key].total_biaya += record.totalKehadiran * 19000; // Biaya per kehadiran
+    });
+
+    // Convert grouped data to array and format the response 
+    const formattedData = Object.values(groupedData).map(item => ({
+      unit_kerja: item.unit_kerja,
+      bulan: item.bulan,
+      tahun: item.tahun,
+      total_peserta: item.total_peserta.size,
+      total_biaya: item.total_biaya.toLocaleString('id-ID')
+    }));
+
+    // Sort by unit kerja, year, and month
+    formattedData.sort((a, b) => {
+      if (a.unit_kerja !== b.unit_kerja) {
+        return a.unit_kerja.localeCompare(b.unit_kerja);
+      }
+      if (a.tahun !== b.tahun) {
+        return b.tahun - a.tahun;
+      }
+      const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+      return months.indexOf(a.bulan) - months.indexOf(b.bulan);
+    });
+
+    return res.status(200).json({
+      status: 'success',
+      total: formattedData.length,
+      data: formattedData
+    });
+
+  } catch (error) {
+    console.error('Error in getRekapAbsensi:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Internal server error', 
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createJadwalPendaftaran,
   getAllUnitKerja,
@@ -2904,7 +2941,6 @@ module.exports = {
   generateSuratPengantarMhs,
   generateSuratPengantarSiswa,
   sendSuratPengantar,
-  estimateCost,
   getJadwalPendaftaran,
   editSchedule,
   createAccountPegawaiCabang,
@@ -2924,4 +2960,5 @@ module.exports = {
   getDetailAbsensi,
   updateAbsensi,
   generateAbsensi,
+  getRekapAbsensi,
 };
