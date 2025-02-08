@@ -10,11 +10,11 @@ module.exports = (sequelize, DataTypes) => {
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      Kehadiran.belongsTo(models.Permintaan, { foreignKey: 'pesertamagangId', as: 'pesertamagang' , onDelete: 'CASCADE' });
+      Kehadiran.belongsTo(models.Permintaan, { foreignKey: 'permintaanId', as: 'pesertamagang' , onDelete: 'CASCADE' });
     }
   }
   Kehadiran.init({
-    pesertamagangId: {
+    permintaanId: {
       type : DataTypes.INTEGER,
       allowNull: false,
       references: {
@@ -27,10 +27,13 @@ module.exports = (sequelize, DataTypes) => {
       type : DataTypes.INTEGER,
       allowNull: true,
     },
-    total_biaya: {
+    bulan: {
+      type : DataTypes.ENUM('Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'),
+      allowNull: true,
+    },
+    tahun: {
       type : DataTypes.INTEGER,
       allowNull: true,
-
     },
 
   }, {

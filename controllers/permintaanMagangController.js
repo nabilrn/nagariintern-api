@@ -12,8 +12,12 @@ const {
   Prodi,
   Mahasiswa,
   Karyawan,
+  Kehadiran,
+  Jadwal,
 } = require("../models/index");
 const path = require("path");
+const { Op } = require("sequelize");
+
 const createPermintaanMagangSiswa = async (req, res) => {
   try {
     const {
@@ -49,7 +53,25 @@ const createPermintaanMagangSiswa = async (req, res) => {
         error: "Semua field wajib diisi",
       });
     }
-    
+
+    const nowDate = new Date();
+
+    const jadwalPendaftaran = await Jadwal.findOne({
+      where: {
+        tanggalMulai: {
+          [Op.lte]: nowDate, // less than or equal to current date
+        },
+        tanggalTutup: {
+          [Op.gte]: nowDate, // greater than or equal to current date
+        },
+      },
+    });
+
+    if (!jadwalPendaftaran) {
+      return res.status(400).json({
+        error: "Pendaftaran magang sudah ditutup",
+      });
+    }
 
     if (!req.files || !req.files.fileCv || !req.files.fileKtp) {
       return res.status(400).json({
@@ -98,6 +120,7 @@ const createPermintaanMagangSiswa = async (req, res) => {
     // Create PermintaanMagang record
     const permintaanMagang = await Permintaan.create({
       userId,
+      jadwalId: jadwalPendaftaran.id,
       type: "siswa",
       smkId: smkRecord.id,
       jurusanId: jurusanRecord.id,
@@ -120,6 +143,8 @@ const createPermintaanMagangSiswa = async (req, res) => {
       },
     ];
     await Dokumen.bulkCreate(documents);
+
+    
 
     res.status(201).json({
       message: "Permintaan magang berhasil dibuat",
@@ -202,6 +227,7 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
       });
     }
 
+
     // Validate dates
     const startDate = new Date(tanggalMulai);
     const endDate = new Date(tanggalSelesai);
@@ -210,6 +236,28 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
         error: "Tanggal selesai harus lebih besar dari tanggal mulai",
       });
     }
+
+
+    
+    const nowDate = new Date();
+
+    const jadwalPendaftaran = await Jadwal.findOne({
+      where: {
+        tanggalMulai: {
+          [Op.lte]: nowDate, // less than or equal to current date
+        },
+        tanggalTutup: {
+          [Op.gte]: nowDate, // greater than or equal to current date
+        },
+      },
+    });
+
+    if (!jadwalPendaftaran) {
+      return res.status(400).json({
+        error: "Pendaftaran magang sudah ditutup",
+      });
+    }
+
 
     console.log(perguruanTinggi, ">>>>>>>>>>>>>>>>>>>>>>>");
     const perguruanTinggiRecord = await PerguruanTinggi.findOne({
@@ -244,6 +292,7 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
     // Create PermintaanMagang record
     const permintaanMagang = await Permintaan.create({
       userId,
+      jadwalId: jadwalPendaftaran.id,
       type: "mahasiswa",
       ptId: perguruanTinggiRecord.id,
       prodiId: prodiRecord.id,
@@ -278,6 +327,7 @@ const createPermintaanMagangMahasiswa = async (req, res) => {
     ];
 
     await Dokumen.bulkCreate(documents);
+
 
     // Send success response
     res.status(201).json({
@@ -449,7 +499,7 @@ const getAllPermintaanMagang = async (req, res) => {
   try {
     const permintaan = await Permintaan.findAll({
       where: {
-        penempatan: null // Only get records where penempatan is null
+        penempatan: null, // Only get records where penempatan is null
       },
       include: [
         {
@@ -465,7 +515,7 @@ const getAllPermintaanMagang = async (req, res) => {
               attributes: ["name", "nisn", "no_hp", "alamat"],
             },
             {
-              model: Mahasiswa, 
+              model: Mahasiswa,
               attributes: ["name", "nim", "no_hp", "alamat"],
             },
           ],
@@ -477,7 +527,7 @@ const getAllPermintaanMagang = async (req, res) => {
         },
         {
           model: UnitKerja,
-          as: "UnitKerjaPenempatan", 
+          as: "UnitKerjaPenempatan",
           attributes: ["name"],
         },
         {
@@ -580,7 +630,6 @@ const getAllPermintaanMagang = async (req, res) => {
   }
 };
 
-
 const cabangPermintaanMagang = async (req, res) => {
   try {
     const userId = req.userId;
@@ -588,7 +637,8 @@ const cabangPermintaanMagang = async (req, res) => {
 
     const permintaan = await Permintaan.findAll({
       where: {
-        penempatan: karyawan.unitKerjaId},
+        penempatan: karyawan.unitKerjaId,
+      },
       include: [
         {
           model: Status,
@@ -763,7 +813,10 @@ const getPermintaanMagangById = async (req, res) => {
         { model: PerguruanTinggi, attributes: ["name"] },
         { model: Prodi, attributes: ["name"] },
         { model: Status },
+        { model: Kehadiran },
       ],
+      order: [[Kehadiran, "id", "ASC"]], // Tambahkan order di sini
+
     });
 
     if (!permintaanMagang) {
@@ -788,16 +841,18 @@ const sendSuratPernyataan = async (req, res) => {
     const fileSuratPernyataanSiswa = req.files.fileSuratPernyataanSiswa;
     const fileSuratPernyataanWali = req.files.fileSuratPernyataanWali;
     const fileTabungan = req.files.fileTabungan;
-    const {nomorRekening} = req.body;
+    const { nomorRekening } = req.body;
 
     const permintaan = await Permintaan.findOne({
       where: { userId: userId },
     });
 
-    const user = await Mahasiswa.findOne({ where: { userId } }) || await Siswa.findOne({ where: { userId } });
+    const user =
+      (await Mahasiswa.findOne({ where: { userId } })) ||
+      (await Siswa.findOne({ where: { userId } }));
 
     await user.update({
-      rekening: nomorRekening
+      rekening: nomorRekening,
     });
     await permintaan.update({
       statusId: 3,
@@ -810,8 +865,11 @@ const sendSuratPernyataan = async (req, res) => {
       });
     }
 
-
-    if (!fileSuratPernyataanSiswa || !fileSuratPernyataanWali || !fileTabungan) {
+    if (
+      !fileSuratPernyataanSiswa ||
+      !fileSuratPernyataanWali ||
+      !fileTabungan
+    ) {
       return res.status(400).json({
         status: "error",
         message: "File surat balasan harus diunggah",
@@ -832,8 +890,8 @@ const sendSuratPernyataan = async (req, res) => {
       {
         permintaanId: permintaan.id,
         tipeDokumenId: 10,
-        url: req.files.fileTabungan[0].filename
-      }
+        url: req.files.fileTabungan[0].filename,
+      },
     ];
     await Dokumen.bulkCreate(documents);
 
@@ -885,12 +943,10 @@ const rejectedStatusPermintaanMagang = async (req, res) => {
 const rejectStatusPermintaanMagang = async (req, res) => {
   try {
     const userId = req.userId;
-        
 
     const permintaanMagang = await Permintaan.findOne({
       where: { userId: userId },
     });
-
 
     if (!permintaanMagang) {
       return res
@@ -929,7 +985,7 @@ const approveStatusPermintaanMagang = async (req, res) => {
         .json({ error: "Permintaan magang tidak ditemukan." });
     }
 
-    // Validate penempatan exists in UnitKerja 
+    // Validate penempatan exists in UnitKerja
     if (penempatan) {
       const unitKerja = await UnitKerja.findByPk(penempatan);
       if (!unitKerja) {
