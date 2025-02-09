@@ -27,6 +27,7 @@ const convert = util.promisify(libre.convert);
 const nodemailer = require("nodemailer");
 const bcrypt = require("bcrypt");
 const { get } = require("http");
+const ejs = require('ejs');
 
 const calculateAvailableQuota = async () => {
   const unitKerjas = await UnitKerja.findAll();
@@ -982,6 +983,8 @@ const sendSuratBalasan = async (req, res) => {
       });
     }
 
+    const logoUrl = "https://upload.wikimedia.org/wikipedia/commons/d/db/Bank_Nagari.svg";
+
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -991,54 +994,71 @@ const sendSuratBalasan = async (req, res) => {
     });
 
     for (const response of responseArray) {
-      const email = response.email;
-      const filePath = req.files.fileSuratBalasan[0].path;
-      const fileName = req.files.fileSuratBalasan[0].filename;
+      const participant = await Permintaan.findOne({
+        where: { id: response.id },
+        include: [{
+          model: Users,
+          include: [
+            { model: Mahasiswa, attributes: ['name'] },
+            { model: Siswa, attributes: ['name'] }
+          ]
+        }]
+      });
+
+      if (!participant) {
+        console.error(`Participant with id ${response.id} not found`);
+        continue;
+      }
+
+      const nama = participant.User?.Mahasiswas?.[0]?.name || 
+                  participant.User?.Siswas?.[0]?.name || 
+                  'Peserta Magang';
+
+      const templatePath = path.join(__dirname, '../public/template/SuratBalasanMail.ejs');
+      const emailTemplate = await ejs.renderFile(templatePath, { 
+        nama,
+        logoUrl
+      });
 
       const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "Surat Balasan",
-        html: `
-          <div style="font-family: Arial, sans-serif; color: #333;">
-            <h2 style="color: #4CAF50;">Surat Balasan</h2>
-            <p>Dear Recipient,</p>
-            <p>Berikut adalah surat balasan yang Anda minta. Silakan lihat lampiran untuk detail lebih lanjut.</p>
-            <p>Terima kasih,</p>
-            <p><strong>Tim Kami</strong></p>
-            <p style="font-size: 12px; color: #777;">Email ini dikirim secara otomatis, mohon tidak membalas email ini.</p>
-          </div>
-        `,
-        attachments: [
-          {
-            filename: fileName,
-            path: filePath,
-          },
-        ],
+        from: `"Bank Nagari Intern" <${process.env.EMAIL_USER}>`,
+        to: response.email,
+        subject: "Surat Balasan Magang - Bank Nagari",
+        html: emailTemplate,
+        attachments: [{
+          filename: req.files.fileSuratBalasan[0].filename,
+          path: req.files.fileSuratBalasan[0].path,
+        }]
       };
 
-      await transporter.sendMail(mailOptions);
+      try {
+        await transporter.sendMail(mailOptions);
 
-      await Promise.all([
-        Dokumen.create({
-          permintaanId: response.id,
-          tipeDokumenId: 5, // Assuming 5 is the ID for Surat Balasan
-          url: fileName, // Save only the filename instead of full path
-        }),
-        Permintaan.update({ statusId: 2 }, { where: { id: response.id } }),
-      ]);
+        await Promise.all([
+          Dokumen.create({
+            permintaanId: response.id,
+            tipeDokumenId: 5,
+            url: req.files.fileSuratBalasan[0].filename,
+          }),
+          Permintaan.update({ statusId: 2 }, { where: { id: response.id } })
+        ]);
+      } catch (emailError) {
+        console.error(`Error sending email to ${response.email}:`, emailError);
+        continue;
+      }
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       status: "success",
-      message: "Surat balasan berhasil dikirim ke semua email",
+      message: "Surat balasan berhasil dikirim ke semua email"
     });
+
   } catch (error) {
     console.error("Error in sendSuratBalasan:", error);
     return res.status(500).json({
-      status: "error",
+      status: "error", 
       message: "Internal server error",
-      error: error.message,
+      error: error.message
     });
   }
 };
@@ -1058,6 +1078,9 @@ const sendSuratPengantar = async (req, res) => {
         message: "File surat pengantar harus diunggah",
       });
     }
+
+    const logoUrl = "https://upload.wikimedia.org/wikipedia/commons/d/db/Bank_Nagari.svg";
+    
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -1065,39 +1088,64 @@ const sendSuratPengantar = async (req, res) => {
         pass: process.env.EMAIL_PASS,
       },
     });
+
     for (const response of responseArray) {
-      const email = response.email;
-      const filePath = req.files.SuratPengantar[0].path;
-      const fileName = req.files.SuratPengantar[0].filename;
+      // Get participant details
+      const participant = await Permintaan.findOne({
+        where: { id: response.id },
+        include: [{
+          model: Users,
+          include: [
+            { model: Mahasiswa, attributes: ['name'] },
+            { model: Siswa, attributes: ['name'] }
+          ]
+        }]
+      });
+
+      if (!participant) {
+        console.error(`Participant with id ${response.id} not found`);
+        continue;
+      }
+
+      const nama = participant.User?.Mahasiswas?.[0]?.name || 
+                  participant.User?.Siswas?.[0]?.name || 
+                  'Peserta Magang';
+
+      // Render email template
+      const templatePath = path.join(__dirname, '../public/template/SuratPengantarMail.ejs');
+      const emailTemplate = await ejs.renderFile(templatePath, { 
+        nama,
+        logoUrl
+      });
+
       const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: "Surat Pengantar",
-        text: "Berikut adalah surat pengantar anda.",
-        attachments: [
-          {
-            filename: req.files.SuratPengantar[0].filename,
-            path: filePath,
-          },
-        ],
+        from: `"Bank Nagari Intern" <${process.env.EMAIL_USER}>`,
+        to: response.email,
+        subject: "Surat Pengantar Magang - Bank Nagari",
+        html: emailTemplate,
+        attachments: [{
+          filename: req.files.SuratPengantar[0].filename,
+          path: req.files.SuratPengantar[0].path,
+        }]
       };
+
       await transporter.sendMail(mailOptions);
+
       await Promise.all([
         Dokumen.create({
           permintaanId: response.id,
           tipeDokumenId: 8,
-          url: fileName,
+          url: req.files.SuratPengantar[0].filename,
         }),
         Permintaan.update({ statusId: 4 }, { where: { id: response.id } }),
       ]);
-      console.log(response.tanggal_mulai);
-      console.log(response.tanggal_selesai);
+
+      // Create attendance records
       const start = new Date(response.tanggal_mulai);
       const end = new Date(response.tanggal_selesai);
-      console.log(start);
-      console.log(end);
       const currentDate = new Date(start);
       currentDate.setDate(1);
+      
       const kehadiranRecords = [];
       while (currentDate <= end) {
         kehadiranRecords.push({
@@ -1108,9 +1156,10 @@ const sendSuratPengantar = async (req, res) => {
         });
         currentDate.setMonth(currentDate.getMonth() + 1);
       }
-      console.log(kehadiranRecords, ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+      
       await Kehadiran.bulkCreate(kehadiranRecords);
     }
+
     res.status(200).json({
       status: "success",
       message: "Surat pengantar berhasil dikirim ke semua email",
@@ -1566,10 +1615,9 @@ const createAccountPegawaiCabang = async (req, res) => {
   try {
     const { email, unitKerjaId } = req.body;
 
-    // Generate random password (8 characters with letters and numbers)
+    // Generate random password
     const generatePassword = () => {
-      const chars =
-        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
       let password = "";
       for (let i = 0; i < 8; i++) {
         password += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -1591,15 +1639,22 @@ const createAccountPegawaiCabang = async (req, res) => {
       unitKerjaId,
     });
 
-    // Get unit kerja name
     const unitKerja = await UnitKerja.findByPk(unitKerjaId);
     if (!unitKerja) {
       throw new Error("Unit kerja not found");
     }
 
-    const verificationLink = `${req.protocol}://${req.get(
-      "host"
-    )}/verify-email-pegawai?token=${user.id}`;
+    const verificationLink = `${req.protocol}://${req.get("host")}/verify-email-pegawai?token=${user.id}`;
+    const logoUrl = "https://upload.wikimedia.org/wikipedia/commons/d/db/Bank_Nagari.svg";
+
+    // Render email template
+    const templatePath = path.join(__dirname, '../public/template/AccountCreatedMail.ejs');
+    const emailTemplate = await ejs.renderFile(templatePath, {
+      email,
+      password,
+      verificationLink,
+      logoUrl
+    });
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -1610,37 +1665,24 @@ const createAccountPegawaiCabang = async (req, res) => {
     });
 
     const mailOptions = {
-      from: `"No Reply" <${process.env.EMAIL_USER}>`,
+      from: `"Bank Nagari Admin" <${process.env.EMAIL_USER}>`,
       to: email,
-      subject: "Account Verification and Credentials",
-      replyTo: "no-reply@domain.com",
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #333;">
-          <h2 style="color: #4CAF50;">Verifikasi Akun Admin Cabang</h2>
-          <p>Your account has been created with the following credentials:</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Password:</strong> ${password}</p>
-          <p>Please verify your email by clicking the link below:</p>
-          <p><a href="${verificationLink}">Verify Email</a></p>
-          <p>Please change your password after logging in for the first time.</p>
-          <hr>
-          <p style="color: #666; font-size: 12px;">This is an automated message. Please do not reply to this email as it is not monitored.</p>
-        </div>
-      `,
+      subject: "Verifikasi Akun Admin Bank Nagari",
+      html: emailTemplate,
     };
 
     await transporter.sendMail(mailOptions);
 
     return res.status(201).json({
       status: "success",
-      message:
-        "Account created successfully. Credentials have been sent to the email.",
+      message: "Account created successfully. Credentials have been sent to the email.",
       data: {
         email: user.email,
         role: user.role,
         unitKerja: unitKerja.name,
       },
     });
+
   } catch (error) {
     console.error("Error:", error);
     return res.status(500).json({
@@ -1658,32 +1700,27 @@ const verifyEmailPegawai = async (req, res) => {
     const user = await Users.findByPk(token);
 
     if (!user) {
-      return res.status(404).json({
-        status: "error",
-        message: "User not found",
+      return res.status(400).render('EmailVerificationError', {
+        error: "Token verifikasi tidak valid atau sudah kadaluarsa"
       });
     }
 
     if (user.isVerified) {
-      return res.status(400).json({
-        status: "error",
-        message: "Email already verified",
+      return res.status(400).render('EmailVerificationError', {
+        error: "Email sudah diverifikasi sebelumnya"
       });
     }
 
     user.isVerified = true;
     await user.save();
 
-    return res.status(200).json({
-      status: "success",
-      message: "Email verified successfully",
-    });
+    // Render the success page
+    return res.render('EmailVerifiedCabang');
+
   } catch (error) {
-    console.error("Error:", error);
-    return res.status(500).json({
-      status: "error",
-      message: "Internal server error",
-      error: error.message,
+    console.error("Error in email verification:", error);
+    return res.status(500).render('EmailVerificationError', {
+      error: "Terjadi kesalahan saat memverifikasi email"
     });
   }
 };
@@ -1746,7 +1783,7 @@ const editPasswordPegawai = async (req, res) => {
       });
     }
 
-    // Use the same bcrypt settings as in the login process (typically 10 rounds)
+    // Use the same bcrypt settings as in the login process
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -1754,7 +1791,16 @@ const editPasswordPegawai = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    // Send email notification with password
+    // Logo URL for email template
+    const logoUrl = "https://upload.wikimedia.org/wikipedia/commons/d/db/Bank_Nagari.svg";
+
+    // Render email template
+    const templatePath = path.join(__dirname, '../public/template/ResetPassword.ejs');
+    const emailTemplate = await ejs.renderFile(templatePath, {
+      password,
+      logoUrl
+    });
+
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -1764,20 +1810,10 @@ const editPasswordPegawai = async (req, res) => {
     });
 
     const mailOptions = {
-      from: `"No Reply" <${process.env.EMAIL_USER}>`,
+      from: `"Bank Nagari Admin" <${process.env.EMAIL_USER}>`,
       to: user.email,
-      subject: "Password Updated Successfully",
-      html: `
-        <div style="font-family: Arial, sans-serif; color: #333;">
-          <h2 style="color: #4CAF50;">Password Update Notification</h2>
-          <p>Your password has been successfully updated.</p>
-          <p><strong>Your new password:</strong> ${password}</p>
-          <p>Please keep this password secure and do not share it with anyone.</p>
-          <p>If you did not make this change, please contact the administrator immediately.</p>
-          <hr>
-          <p style="color: #666; font-size: 12px;">This is an automated message. Please do not reply to this email.</p>
-        </div>
-      `,
+      subject: "Password Updated Successfully - Bank Nagari",
+      html: emailTemplate,
     };
 
     await transporter.sendMail(mailOptions);
@@ -1787,7 +1823,6 @@ const editPasswordPegawai = async (req, res) => {
       message: "Password updated successfully and notification email sent",
     });
   } catch (error) {
-    // Log the error but don't send it to client
     console.error("Error updating password:", error);
     return res.status(500).json({
       status: "error",
@@ -2459,7 +2494,6 @@ const getAbsensi = async (req, res) => {
       return res.status(404).json({ message: "Karyawan tidak ditemukan" });
     }
 
-    // Get attendance records for interns in the employee's unit
     const absensi = await Kehadiran.findAll({
       include: [
         {
@@ -2490,7 +2524,6 @@ const getAbsensi = async (req, res) => {
       return res.status(404).json({ message: "Data absensi tidak ditemukan" });
     }
 
-    // Mengelompokkan dan menjumlahkan total kehadiran berdasarkan bulan dan tahun
     const groupedData = {};
     const monthOrder = {
       Januari: 1,

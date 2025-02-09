@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification Success - Bank Nagari Admin</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4 md:p-8">
+    <div id="successCard" class="opacity-0 max-w-md w-full bg-white rounded-xl shadow-lg p-8 space-y-6">
+        <div class="flex justify-center">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/d/db/Bank_Nagari.svg" 
+                 alt="Bank Nagari Logo" 
+                 class="w-40 h-auto"
+                 id="logo">
+        </div>
+        
+        <div id="checkmark" class="flex justify-center opacity-0">
+            <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+            </div>
+        </div>
+        
+        <div class="space-y-4 text-center">
+            <h1 id="title" class="text-2xl font-bold text-gray-800 opacity-0">
+                Email Admin Berhasil Diverifikasi!
+            </h1>
+            
+            <p id="message" class="text-gray-600 opacity-0">
+                Selamat! Akun Admin Anda telah berhasil diverifikasi.<br>
+                Anda sekarang dapat login ke panel admin Bank Nagari Intern.
+            </p>
+            
+            <div id="buttonContainer" class="pt-4 opacity-0">
+                <a href="http://localhost:5174/admin/login" 
+                   class="inline-flex items-center px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors duration-200 transform hover:scale-105">
+                    Lanjutkan ke Login Admin
+                    <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial animation timeline
+            const tl = gsap.timeline();
+            
+            tl.to('#successCard', {
+                opacity: 1,
+                y: 0,
+                duration: 0.6,
+                ease: 'power2.out'
+            })
+            .to('#logo', {
+                scale: 1,
+                duration: 0.5,
+                ease: 'back.out(1.7)'
+            })
+            .to('#checkmark', {
+                opacity: 1,
+                scale: 1,
+                duration: 0.5,
+                ease: 'back.out(1.7)'
+            })
+            .to('#title', {
+                opacity: 1,
+                y: 0,
+                duration: 0.5
+            })
+            .to('#message', {
+                opacity: 1,
+                y: 0,
+                duration: 0.5
+            })
+            .to('#buttonContainer', {
+                opacity: 1,
+                y: 0,
+                duration: 0.5
+            });
+
+            // Hover animation for the button
+            const button = document.querySelector('a');
+            button.addEventListener('mouseenter', () => {
+                gsap.to(button, {
+                    scale: 1.05,
+                    duration: 0.2
+                });
+            });
+            button.addEventListener('mouseleave', () => {
+                gsap.to(button, {
+                    scale: 1,
+                    duration: 0.2
+                });
+            });
+        });
+    </script>
+</body>
+</html>

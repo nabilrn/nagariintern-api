@@ -232,25 +232,27 @@ const verifyEmail = async (req, res) => {
     const user = await Users.findOne({
       where: { emailVerificationToken: token },
     });
-    
 
     if (!user) {
-      return res.status(400).json({ error: "Invalid or expired token" });
+      return res.status(400).render('EmailVerificationError', {
+        error: "Token verifikasi tidak valid atau sudah kadaluarsa"
+      });
     }
 
     user.isVerified = true;
     user.emailVerificationToken = null;
     await user.save();
 
-    res
-      .status(200)
-      .json({ message: "Email verified successfully. You can now log in." });
+    // Render the success page instead of sending JSON
+    return res.render('EmailVerified');
+
   } catch (error) {
     console.error("Error in email verification:", error.message || error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.status(500).render('EmailVerificationError', {
+      error: "Terjadi kesalahan saat memverifikasi email"
+    });
   }
 };
-
 module.exports = {
   login,
   // loginLimiter,
