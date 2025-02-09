@@ -1209,11 +1209,11 @@ const getDiverifikasi = async (req, res) => {
         ...data.dataValues,
         User: data.User
           ? {
-              email: data.User.email,
-              Mahasiswas:
-                data.type === "mahasiswa" ? data.User.Mahasiswas : undefined,
-              Siswas: data.type === "siswa" ? data.User.Siswas : undefined,
-            }
+            email: data.User.email,
+            Mahasiswas:
+              data.type === "mahasiswa" ? data.User.Mahasiswas : undefined,
+            Siswas: data.type === "siswa" ? data.User.Siswas : undefined,
+          }
           : null,
         Dokumens: data.Dokumens ? data.Dokumens.map((dok) => dok.url) : [],
       };
@@ -1826,12 +1826,12 @@ const generateLampiranRekomenMhs = async (req, res) => {
           univ: univ.nama_institusi,
           students: Array.isArray(prodiData.mahasiswa)
             ? prodiData.mahasiswa.map((student, index) => ({
-                no: index + 1,
-                nama: student.nama,
-                jurusan: prodiData.nama_prodi,
-                penempatan: student.penempatan,
-                periode: student.periode,
-              }))
+              no: index + 1,
+              nama: student.nama,
+              jurusan: prodiData.nama_prodi,
+              penempatan: student.penempatan,
+              periode: student.periode,
+            }))
             : [],
         }));
         return [...acc, ...prodiData];
@@ -1916,11 +1916,11 @@ const generateLampiranRekomenSiswa = async (req, res) => {
       nama_institusi: school.nama_institusi,
       students: Array.isArray(school.siswa)
         ? school.siswa.map((student, index) => ({
-            no: index + 1,
-            nama: student.nama,
-            penempatan: student.penempatan,
-            periode: student.periode,
-          }))
+          no: index + 1,
+          nama: student.nama,
+          penempatan: student.penempatan,
+          periode: student.periode,
+        }))
         : [],
     }));
 
@@ -2415,8 +2415,8 @@ const updateAbsensi = async (req, res) => {
     console.log(req.body);
     console.log(req.params);
     userId = req.userId;
-    Karyawan = await Karyawan.findOne({ where: { userId } });
-    if (!Karyawan) {
+    const karyawan = await Karyawan.findOne({ where: { userId } });
+    if (!karyawan) {
       return res.status(404).json({
         status: "error",
         message: "Authentication failed",
@@ -2629,7 +2629,7 @@ const getDetailAbsensi = async (req, res) => {
         tahun,
         karyawanId: karyawan.id,
       },
-      
+
       include: [
         {
           model: Karyawan,
@@ -2637,7 +2637,7 @@ const getDetailAbsensi = async (req, res) => {
         },
       ],
     });
-      
+
 
     const detailedData = absensi.map((item, index) => {
       const user = item.pesertamagang.User;
@@ -2661,9 +2661,9 @@ const getDetailAbsensi = async (req, res) => {
     res.status(200).json({
       message: "Data detail absensi berhasil diambil",
       total: detailedData.length,
-      rekapKehadiran:rekapKehadiran,
+      rekapKehadiran: rekapKehadiran,
       data: detailedData,
-      
+
     });
   } catch (error) {
     console.error("Get Detail Absensi Error:", error);
@@ -2917,8 +2917,28 @@ const sendAbsensi = async (req, res) => {
 
 const getRekapAbsensi = async (req, res) => {
   try {
-    // Get all attendance records with related data
-    const absensi = await Kehadiran.findAll({
+    // Get all rekap kehadiran records with related data
+    const rekapKehadiran = await RekapKehadiran.findAll({
+      include: [
+        {
+          model: Karyawan,
+          as: "karyawan",
+          include: [
+            {
+              model: UnitKerja,
+              attributes: ["name"]
+            }
+          ]
+        }
+      ],
+      order: [
+        ["tahun", "DESC"],
+        ["bulan", "ASC"]
+      ]
+    });
+
+    // Get all attendance records with permintaan and jadwal details
+    const kehadiran = await Kehadiran.findAll({
       include: [
         {
           model: Permintaan,
@@ -2927,69 +2947,92 @@ const getRekapAbsensi = async (req, res) => {
             {
               model: UnitKerja,
               as: "UnitKerjaPenempatan",
-              attributes: ["name"],
+              attributes: ["name"]
             },
-          ],
-        },
-      ],
+            {
+              model: Jadwal,
+              attributes: ["tanggalMulai", "tanggalTutup"]
+            }
+          ]
+        }
+      ]
     });
 
-    // Group data by unit kerja
-    const groupedData = {};
-
-    absensi.forEach((record) => {
+    // Group kehadiran data by unit kerja, month and year
+    const kehadiranData = {};
+    kehadiran.forEach(record => {
       const unitKerja = record.pesertamagang?.UnitKerjaPenempatan?.name;
       const bulan = record.bulan;
       const tahun = record.tahun;
+      const jadwalMulai = record.pesertamagang?.Jadwal?.tanggalMulai;
+      const jadwalTutup = record.pesertamagang?.Jadwal?.tanggalTutup;
 
       if (!unitKerja) return;
 
       const key = `${unitKerja}-${bulan}-${tahun}`;
 
-      if (!groupedData[key]) {
-        groupedData[key] = {
+      if (!kehadiranData[key]) {
+        kehadiranData[key] = {
           unit_kerja: unitKerja,
           bulan: bulan,
           tahun: tahun,
-          total_peserta: new Set(), // Use Set to count unique participants
+          total_peserta: new Set(),
+          total_kehadiran: 0,
           total_biaya: 0,
+          jadwalMulai: jadwalMulai,
+          jadwalTutup: jadwalTutup
         };
       }
 
-      groupedData[key].total_peserta.add(record.permintaanId);
-      groupedData[key].total_biaya += record.totalKehadiran * 19000; // Biaya per kehadiran
+      kehadiranData[key].total_peserta.add(record.permintaanId);
+      kehadiranData[key].total_kehadiran += record.totalKehadiran;
+      kehadiranData[key].total_biaya += record.totalKehadiran * 19000;
     });
 
-    // Convert grouped data to array and format the response
-    const formattedData = Object.values(groupedData).map((item) => ({
-      unit_kerja: item.unit_kerja,
-      bulan: item.bulan,
-      tahun: item.tahun,
-      total_peserta: item.total_peserta.size,
-      total_biaya: item.total_biaya.toLocaleString("id-ID"),
-    }));
+    // Format date helper function
+    const formatDate = (date) => {
+      if (!date) return '';
+      return new Date(date).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    };
 
-    // Sort by unit kerja, year, and month
+    // Format the response by combining rekap and kehadiran data
+    const formattedData = rekapKehadiran.map(rekap => {
+      const key = `${rekap.karyawan?.UnitKerja?.name}-${rekap.bulan}-${rekap.tahun}`;
+      const kehadiranInfo = kehadiranData[key] || {
+        total_peserta: new Set(),
+        total_kehadiran: 0,
+        total_biaya: 0,
+        jadwalMulai: null,
+        jadwalTutup: null
+      };
+
+      return {
+        id: rekap.id,
+        unit_kerja: rekap.karyawan?.UnitKerja?.name || "Unknown",
+        bulan: rekap.bulan,
+        tahun: rekap.tahun,
+        periode: `${formatDate(kehadiranInfo.jadwalMulai)} - ${formatDate(kehadiranInfo.jadwalTutup)}`,
+        total_peserta: kehadiranInfo.total_peserta.size,
+        total_kehadiran: kehadiranInfo.total_kehadiran,
+        total_biaya: kehadiranInfo.total_biaya.toLocaleString("id-ID"),
+        url_rekap: rekap.url,
+        uploaded_by: rekap.karyawan?.nama || "Unknown",
+        uploaded_at: rekap.createdAt
+      };
+    });
+
+    // Sort by year and month
     formattedData.sort((a, b) => {
-      if (a.unit_kerja !== b.unit_kerja) {
-        return a.unit_kerja.localeCompare(b.unit_kerja);
-      }
       if (a.tahun !== b.tahun) {
         return b.tahun - a.tahun;
       }
       const months = [
-        "Januari",
-        "Februari",
-        "Maret",
-        "April",
-        "Mei",
-        "Juni",
-        "Juli",
-        "Agustus",
-        "September",
-        "Oktober",
-        "November",
-        "Desember",
+        "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+        "Juli", "Agustus", "September", "Oktober", "November", "Desember"
       ];
       return months.indexOf(a.bulan) - months.indexOf(b.bulan);
     });
@@ -2997,14 +3040,15 @@ const getRekapAbsensi = async (req, res) => {
     return res.status(200).json({
       status: "success",
       total: formattedData.length,
-      data: formattedData,
+      data: formattedData
     });
+
   } catch (error) {
     console.error("Error in getRekapAbsensi:", error);
     return res.status(500).json({
-      status: "error",
+      status: "error", 
       message: "Internal server error",
-      error: error.message,
+      error: error.message
     });
   }
 };
