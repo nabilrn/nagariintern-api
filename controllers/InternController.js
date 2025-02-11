@@ -11,12 +11,12 @@ const {
   PerguruanTinggi,
   Prodi,
   Mahasiswa,
-  Karyawan,
-  Kehadiran,
   Jadwal,
 } = require("../models/index");
 const path = require("path");
 const { Op } = require("sequelize");
+const fs = require("fs");
+
 
 const createPermintaanMagangSiswa = async (req, res) => {
   try {
@@ -495,345 +495,10 @@ const getMyPermintaanMagang = async (req, res) => {
   }
 };
 
-const getAllPermintaanMagang = async (req, res) => {
-  try {
-    const permintaan = await Permintaan.findAll({
-      where: {
-        penempatan: null, // Only get records where penempatan is null
-      },
-      include: [
-        {
-          model: Status,
-          attributes: ["name"],
-        },
-        {
-          model: Users,
-          attributes: ["email"],
-          include: [
-            {
-              model: Siswa,
-              attributes: ["name", "nisn", "no_hp", "alamat"],
-            },
-            {
-              model: Mahasiswa,
-              attributes: ["name", "nim", "no_hp", "alamat"],
-            },
-          ],
-        },
-        {
-          model: UnitKerja,
-          as: "UnitKerjaPengajuan",
-          attributes: ["name"],
-        },
-        {
-          model: UnitKerja,
-          as: "UnitKerjaPenempatan",
-          attributes: ["name"],
-        },
-        {
-          model: Dokumen,
-          required: false,
-          include: [
-            {
-              model: TipeDokumen,
-              as: "tipeDokumen",
-              attributes: ["name"],
-            },
-          ],
-        },
-        {
-          model: Smk,
-          attributes: ["name"],
-        },
-        {
-          model: Jurusan,
-          attributes: ["name"],
-        },
-        {
-          model: PerguruanTinggi,
-          attributes: ["name"],
-        },
-        {
-          model: Prodi,
-          attributes: ["name"],
-        },
-      ],
-      order: [["createdAt", "DESC"]],
-    });
 
-    if (!permintaan.length) {
-      return res.status(404).json({
-        message: "Data permintaan magang tidak ditemukan",
-      });
-    }
 
-    const transformedData = permintaan.map((item) => {
-      const baseData = {
-        id: item.id,
-        userId: item.userId,
-        email: item.User.email,
-        type: item.type,
-        tanggalMulai: item.tanggalMulai,
-        tanggalSelesai: item.tanggalSelesai,
-        status: item.Status,
-        unitKerja: item.UnitKerjaPengajuan?.name || null,
-        penempatan: item.UnitKerjaPenempatan?.name || null,
-        dokumen: item.Dokumens
-          ? item.Dokumens.map((doc) => ({
-              tipe: doc.tipeDokumen?.name || null,
-              url: doc.url,
-            }))
-          : [],
-        createdAt: item.createdAt,
-      };
 
-      if (item.type === "siswa") {
-        const siswa = item.User?.Siswas?.[0];
-        baseData.institusi = item.Smk?.name || null;
-        baseData.jurusan = item.Jurusan?.name || null;
-        if (siswa) {
-          baseData.biodata = {
-            nama: siswa.name,
-            nisn: siswa.nisn,
-            noHp: siswa.no_hp,
-            alamat: siswa.alamat,
-          };
-        }
-      } else if (item.type === "mahasiswa") {
-        const mahasiswa = item.User?.Mahasiswas?.[0];
-        baseData.institusi = item.PerguruanTinggi?.name || null;
-        baseData.jurusan = item.Prodi?.name || null;
-        if (mahasiswa) {
-          baseData.biodata = {
-            nama: mahasiswa.name,
-            nim: mahasiswa.nim,
-            noHp: mahasiswa.no_hp,
-            alamat: mahasiswa.alamat,
-          };
-        }
-      }
 
-      return baseData;
-    });
-
-    res.status(200).json({
-      message: "Data permintaan magang berhasil diambil",
-      total: transformedData.length,
-      data: transformedData,
-    });
-  } catch (error) {
-    console.error("Get All Permintaan Magang Error:", error);
-    res.status(500).json({
-      message: "Terjadi kesalahan saat mengambil data permintaan magang",
-      error: error.message,
-    });
-  }
-};
-
-const cabangPermintaanMagang = async (req, res) => {
-  try {
-    const userId = req.userId;
-    const karyawan = await Karyawan.findOne({ where: { userId } });
-
-    const permintaan = await Permintaan.findAll({
-      where: {
-        penempatan: karyawan.unitKerjaId,
-      },
-      include: [
-        {
-          model: Status,
-          attributes: ["name"],
-        },
-        {
-          model: Users,
-          attributes: ["email"],
-          include: [
-            {
-              model: Siswa,
-              attributes: ["name", "nisn", "no_hp", "alamat"],
-            },
-            {
-              model: Mahasiswa,
-              attributes: ["name", "nim", "no_hp", "alamat"],
-            },
-          ],
-        },
-        {
-          model: UnitKerja,
-          as: "UnitKerjaPengajuan",
-          attributes: ["name"],
-        },
-        {
-          model: UnitKerja,
-          as: "UnitKerjaPenempatan",
-          attributes: ["name"],
-        },
-        {
-          model: Dokumen,
-          required: false,
-          include: [
-            {
-              model: TipeDokumen,
-              as: "tipeDokumen",
-              attributes: ["name"],
-            },
-          ],
-        },
-        {
-          model: Smk,
-          attributes: ["name"],
-        },
-        {
-          model: Jurusan,
-          attributes: ["name"],
-        },
-        {
-          model: PerguruanTinggi,
-          attributes: ["name"],
-        },
-        {
-          model: Prodi,
-          attributes: ["name"],
-        },
-      ],
-      order: [["createdAt", "DESC"]],
-    });
-
-    if (!permintaan.length) {
-      return res.status(404).json({
-        message: "Data permintaan magang tidak ditemukan",
-      });
-    }
-
-    const transformedData = permintaan.map((item) => {
-      const baseData = {
-        id: item.id,
-        userId: item.userId,
-        email: item.User.email,
-        type: item.type,
-        tanggalMulai: item.tanggalMulai,
-        tanggalSelesai: item.tanggalSelesai,
-        status: item.Status,
-        unitKerja: item.UnitKerjaPengajuan?.name || null,
-        penempatan: item.UnitKerjaPenempatan?.name || null,
-        dokumen: item.Dokumens
-          ? item.Dokumens.map((doc) => ({
-              tipe: doc.tipeDokumen?.name || null,
-              url: doc.url,
-            }))
-          : [],
-        createdAt: item.createdAt,
-      };
-
-      if (item.type === "siswa") {
-        const siswa = item.User?.Siswas?.[0];
-        baseData.institusi = item.Smk?.name || null;
-        baseData.jurusan = item.Jurusan?.name || null;
-        if (siswa) {
-          baseData.biodata = {
-            nama: siswa.name,
-            nisn: siswa.nisn,
-            noHp: siswa.no_hp,
-            alamat: siswa.alamat,
-          };
-        }
-      } else if (item.type === "mahasiswa") {
-        const mahasiswa = item.User?.Mahasiswas?.[0];
-        baseData.institusi = item.PerguruanTinggi?.name || null;
-        baseData.jurusan = item.Prodi?.name || null;
-        if (mahasiswa) {
-          baseData.biodata = {
-            nama: mahasiswa.name,
-            nim: mahasiswa.nim,
-            noHp: mahasiswa.no_hp,
-            alamat: mahasiswa.alamat,
-          };
-        }
-      }
-
-      return baseData;
-    });
-
-    res.status(200).json({
-      message: "Data permintaan magang berhasil diambil",
-      total: transformedData.length,
-      data: transformedData,
-    });
-  } catch (error) {
-    console.error("Get All Permintaan Magang Error:", error);
-    res.status(500).json({
-      message: "Terjadi kesalahan saat mengambil data permintaan magang",
-      error: error.message,
-    });
-  }
-};
-const getPermintaanMagangById = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const permintaanMagang = await Permintaan.findByPk(id, {
-      include: [
-        {
-          model: Users,
-          attributes: ["email"],
-          include: [
-            {
-              model: Siswa,
-              attributes: ["name", "nisn", "no_hp", "alamat"],
-            },
-            {
-              model: Mahasiswa,
-              attributes: ["name", "nim", "no_hp", "alamat"],
-            },
-          ],
-        },
-        { model: Smk, attributes: ["name"] },
-        { model: Jurusan, attributes: ["name"] },
-        {
-          model: UnitKerja,
-          as: "UnitKerjaPengajuan",
-          attributes: ["name"],
-        },
-        {
-          model: UnitKerja,
-          as: "UnitKerjaPenempatan",
-          attributes: ["name"],
-        },
-        {
-          model: Dokumen,
-          required: false,
-          include: [
-            {
-              model: TipeDokumen,
-              as: "tipeDokumen",
-              attributes: ["name"],
-            },
-          ],
-        },
-        { model: PerguruanTinggi, attributes: ["name"] },
-        { model: Prodi, attributes: ["name"] },
-        { model: Status },
-        { model: Kehadiran },
-      ],
-      order: [[Kehadiran, "id", "ASC"]], // Tambahkan order di sini
-
-    });
-
-    if (!permintaanMagang) {
-      return res.status(404).json({
-        message: "Permintaan magang tidak ditemukan.",
-      });
-    }
-
-    res.status(200).json(permintaanMagang);
-  } catch (error) {
-    console.error("Error in getPermintaanMagangById:", error.message || error);
-    res.status(500).json({
-      message: "Terjadi kesalahan pada server.",
-      error: error.message,
-    });
-  }
-};
 
 const sendSuratPernyataan = async (req, res) => {
   try {
@@ -909,36 +574,7 @@ const sendSuratPernyataan = async (req, res) => {
   }
 };
 
-const rejectedStatusPermintaanMagang = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { keterangan } = req.body;
 
-    const permintaanMagang = await Permintaan.findByPk(id);
-
-    if (!permintaanMagang) {
-      return res
-        .status(404)
-        .json({ error: "Permintaan magang tidak ditemukan." });
-    }
-
-    await permintaanMagang.update({
-      statusId: 5,
-      keterangan: keterangan,
-    });
-
-    res.status(200).json({
-      message: "Permintaan magang berhasil ditolak.",
-      data: permintaanMagang,
-    });
-  } catch (error) {
-    console.error(
-      "Error in rejectStatusPermintaanMagang:",
-      error.message || error
-    );
-    res.status(500).json({ error: "Terjadi kesalahan pada server." });
-  }
-};
 
 const rejectStatusPermintaanMagang = async (req, res) => {
   try {
@@ -971,72 +607,7 @@ const rejectStatusPermintaanMagang = async (req, res) => {
   }
 };
 
-const approveStatusPermintaanMagang = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { penempatan } = req.body;
 
-    console.log(req.body);
-    const permintaanMagang = await Permintaan.findByPk(id);
-
-    if (!permintaanMagang) {
-      return res
-        .status(404)
-        .json({ error: "Permintaan magang tidak ditemukan." });
-    }
-
-    // Validate penempatan exists in UnitKerja
-    if (penempatan) {
-      const unitKerja = await UnitKerja.findByPk(penempatan);
-      if (!unitKerja) {
-        return res
-          .status(400)
-          .json({ error: "Unit kerja penempatan tidak valid" });
-      }
-
-      // Check and update quota based on internship type
-      if (permintaanMagang.type === "siswa") {
-        if (unitKerja.kuotaSiswa <= 0) {
-          return res
-            .status(400)
-            .json({ error: "Kuota siswa magang sudah penuh" });
-        }
-        await unitKerja.update({
-          kuotaSiswa: unitKerja.kuotaSiswa - 1,
-        });
-      } else if (permintaanMagang.type === "mahasiswa") {
-        if (unitKerja.kuotaMhs <= 0) {
-          return res
-            .status(400)
-            .json({ error: "Kuota mahasiswa magang sudah penuh" });
-        }
-        await unitKerja.update({
-          kuotaMhs: unitKerja.kuotaMhs - 1,
-        });
-      }
-    }
-
-    // Update both penempatan and unitKerjaId if penempatan provided
-    const updateData = {};
-    if (penempatan) {
-      updateData.penempatan = penempatan;
-      updateData.unitKerjaId = penempatan;
-    }
-
-    await permintaanMagang.update(updateData);
-
-    res.status(200).json({
-      message: "Penempatan magang berhasil diperbarui.",
-      data: permintaanMagang,
-    });
-  } catch (error) {
-    console.error(
-      "Error in approveStatusPermintaanMagang:",
-      error.message || error
-    );
-    res.status(500).json({ error: "Terjadi kesalahan pada server." });
-  }
-};
 
 const deletePermintaanMagang = async (req, res) => {
   try {
@@ -1059,8 +630,6 @@ const deletePermintaanMagang = async (req, res) => {
   }
 };
 
-const fs = require("fs");
-const { where } = require("sequelize");
 
 const downloadSuratBalasan = async (req, res) => {
   try {
@@ -1147,17 +716,59 @@ const downloadSuratBalasan = async (req, res) => {
   }
 };
 
+const getJadwalPendaftaran = async (req, res) => {
+  try {
+    const jadwalPendaftaran = await Jadwal.findAll();
+    return res.status(200).json({
+      status: "success",
+      data: jadwalPendaftaran,
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+const findOneJadwalPendaftaran = async (req, res) => {
+  try {
+    const currentDate = new Date();
+
+    const jadwalPendaftaran = await Jadwal.findOne({
+      where: {
+        tanggalMulai: {
+          [Op.lte]: currentDate, // less than or equal to current date
+        },
+        tanggalTutup: {
+          [Op.gte]: currentDate, // greater than or equal to current date
+        },
+      },
+    });
+
+    return res.status(200).json({
+      status: "success",
+      data: jadwalPendaftaran ? [jadwalPendaftaran] : [], // Return as array to maintain consistency
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    return res.status(500).json({
+      status: "error",
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   createPermintaanMagangSiswa,
   createPermintaanMagangMahasiswa,
-  getAllPermintaanMagang,
-  getPermintaanMagangById,
-  approveStatusPermintaanMagang,
-  rejectedStatusPermintaanMagang,
   rejectStatusPermintaanMagang,
   deletePermintaanMagang,
   getMyPermintaanMagang,
   sendSuratPernyataan,
   downloadSuratBalasan,
-  cabangPermintaanMagang,
+  getJadwalPendaftaran,
+  findOneJadwalPendaftaran
 };
